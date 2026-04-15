@@ -4,34 +4,49 @@ export interface KakaoMessage {
   text: string
 }
 
-// Date header lines (no message content)
-// e.g. "2024년 1월 15일 월요일"  or  "--------------- 2024년 1월 15일 월요일 ---------------"
-const DATE_HEADER_RE = /(\d{4})년 (\d{1,2})월 (\d{1,2})일/
+const DATE_HEADER_RE =
+  /^-*\s*(\d{4})\s*\uB144\s*(\d{1,2})\s*\uC6D4\s*(\d{1,2})\s*\uC77C(?:\s+\S+)?\s*-*$/
 
-// iOS message line: "오전 9:05, 홍길동 : 메시지"
-const IOS_MSG_RE = /^(오전|오후) (\d{1,2}):(\d{2}), (.+?) : (.+)$/
+const IOS_SPLIT_RE =
+  /^(?:\[(\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.\s*(\uC624\uC804|\uC624\uD6C4)\s+\d{1,2}:\d{2})\]\s*)?(\uC624\uC804|\uC624\uD6C4)\s+(\d{1,2}):(\d{2}),\s*(.+?)\s*:\s*(.*)$/
 
-// Android message line: "홍길동 : [오전 9:05] 메시지"
-const ANDROID_MSG_RE = /^(.+?) : \[(오전|오후) (\d{1,2}):(\d{2})\] (.+)$/
+const ANDROID_SPLIT_RE =
+  /^(.+?)\s*:\s*\[(\uC624\uC804|\uC624\uD6C4)\s+(\d{1,2}):(\d{2})\]\s*(.*)$/
 
-// Full inline format (older exports): "[2024년 1월 5일 오후 3:25] [홍길동] 메시지"
-const INLINE_IOS_RE = /^\[(\d{4}년 \d{1,2}월 \d{1,2}일 (?:오전|오후) \d{1,2}:\d{2})\] \[(.+?)\] (.+)$/
-// Full inline Android: "2024년 1월 5일 오후 3:25, 홍길동 : 메시지"
-const INLINE_AND_RE = /^(\d{4}년 \d{1,2}월 \d{1,2}일 (?:오전|오후) \d{1,2}:\d{2}), (.+?) : (.+)$/
+const INLINE_RE =
+  /^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(\uC624\uC804|\uC624\uD6C4)\s+(\d{1,2}):(\d{2}),\s*(.+?)\s*:\s*(.*)$/
 
-const SKIP_RE = /님이 들어왔습니다|님이 나갔습니다|님을 내보냈습니다|채팅방을 나갔습니다|카카오톡 대화/
+const INLINE_BRACKET_RE =
+  /^\[(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(\uC624\uC804|\uC624\uD6C4)\s+(\d{1,2}):(\d{2})\]\s*\[(.+?)\]\s*(.*)$/
 
-function toDate(year: number, month: number, day: number, ampm: string, hour: number, min: number): Date {
+const SYSTEM_RE =
+  /\uB2D8\uC774\s+\uB4E4\uC5B4\uC654\uC2B5\uB2C8\uB2E4|\uB2D8\uC774\s+\uB098\uAC14\uC2B5\uB2C8\uB2E4|\uB2D8\uC744\s+\uB0B4\uBCF4\uB0C8\uC2B5\uB2C8\uB2E4|\uCC44\uD305\uBC29\uC744\s+\uB098\uAC14\uC2B5\uB2C8\uB2E4|\uCE74\uCE74\uC624\uD1A1\s+\uB300\uD654\s+\uB0B4\uC6A9\uC744\s+\uB0B4\uBCF4\uB0C8\uC2B5\uB2C8\uB2E4|\uC800\uC7A5\uD55C\s+\uB0A0\uC9DC/
+
+function toDate(
+  year: number,
+  month: number,
+  day: number,
+  ampm: string,
+  hour: number,
+  min: number
+): Date {
   let h = hour
-  if (ampm === '오후' && h !== 12) h += 12
-  if (ampm === '오전' && h === 12) h = 0
+  if (ampm === '\uC624\uD6C4' && h !== 12) h += 12
+  if (ampm === '\uC624\uC804' && h === 12) h = 0
   return new Date(year, month - 1, day, h, min)
 }
 
-function parseKoreanDatetime(raw: string): Date | null {
-  const m = raw.match(/(\d{4})년 (\d{1,2})월 (\d{1,2})일 (오전|오후) (\d{1,2}):(\d{2})/)
-  if (!m) return null
-  return toDate(+m[1], +m[2], +m[3], m[4], +m[5], +m[6])
+function pushMessage(
+  results: KakaoMessage[],
+  speaker: string,
+  timestamp: Date,
+  text: string
+) {
+  results.push({
+    speaker: speaker.trim(),
+    timestamp,
+    text: text.trim(),
+  })
 }
 
 export function parseKakaoTalk(raw: string): KakaoMessage[] {
@@ -40,51 +55,79 @@ export function parseKakaoTalk(raw: string): KakaoMessage[] {
   let curMonth = 1
   let curDay = 1
 
-  for (const line of raw.split('\n')) {
-    const t = line.trim()
-    if (!t || SKIP_RE.test(t)) continue
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim()
+    if (!trimmed || SYSTEM_RE.test(trimmed)) continue
 
-    // Date header — update current date context
-    const dh = t.match(DATE_HEADER_RE)
-    if (dh && !IOS_MSG_RE.test(t) && !ANDROID_MSG_RE.test(t)) {
-      curYear = +dh[1]; curMonth = +dh[2]; curDay = +dh[3]
+    const dateHeader = trimmed.match(DATE_HEADER_RE)
+    if (dateHeader) {
+      curYear = Number(dateHeader[1])
+      curMonth = Number(dateHeader[2])
+      curDay = Number(dateHeader[3])
       continue
     }
 
-    // iOS split format: "오전 9:05, 홍길동 : 메시지"
-    const ios = t.match(IOS_MSG_RE)
-    if (ios) {
-      const [, ampm, hStr, mStr, speaker, text] = ios
-      const timestamp = toDate(curYear, curMonth, curDay, ampm, +hStr, +mStr)
-      results.push({ speaker: speaker.trim(), timestamp, text: text.trim() })
+    const inline = trimmed.match(INLINE_RE)
+    if (inline) {
+      pushMessage(
+        results,
+        inline[7],
+        toDate(
+          Number(inline[1]),
+          Number(inline[2]),
+          Number(inline[3]),
+          inline[4],
+          Number(inline[5]),
+          Number(inline[6])
+        ),
+        inline[8]
+      )
       continue
     }
 
-    // Android split format: "홍길동 : [오전 9:05] 메시지"
-    const and = t.match(ANDROID_MSG_RE)
-    if (and) {
-      const [, speaker, ampm, hStr, mStr, text] = and
-      const timestamp = toDate(curYear, curMonth, curDay, ampm, +hStr, +mStr)
-      results.push({ speaker: speaker.trim(), timestamp, text: text.trim() })
+    const inlineBracket = trimmed.match(INLINE_BRACKET_RE)
+    if (inlineBracket) {
+      pushMessage(
+        results,
+        inlineBracket[7],
+        toDate(
+          Number(inlineBracket[1]),
+          Number(inlineBracket[2]),
+          Number(inlineBracket[3]),
+          inlineBracket[4],
+          Number(inlineBracket[5]),
+          Number(inlineBracket[6])
+        ),
+        inlineBracket[8]
+      )
       continue
     }
 
-    // Full inline iOS: "[2024년 1월 5일 오후 3:25] [홍길동] 메시지"
-    const inlIos = t.match(INLINE_IOS_RE)
-    if (inlIos) {
-      const [, rawDate, speaker, text] = inlIos
-      const timestamp = parseKoreanDatetime(rawDate)
-      if (timestamp) results.push({ speaker: speaker.trim(), timestamp, text: text.trim() })
+    const iosSplit = trimmed.match(IOS_SPLIT_RE)
+    if (iosSplit) {
+      pushMessage(
+        results,
+        iosSplit[6],
+        toDate(curYear, curMonth, curDay, iosSplit[3], Number(iosSplit[4]), Number(iosSplit[5])),
+        iosSplit[7]
+      )
       continue
     }
 
-    // Full inline Android: "2024년 1월 5일 오후 3:25, 홍길동 : 메시지"
-    const inlAnd = t.match(INLINE_AND_RE)
-    if (inlAnd) {
-      const [, rawDate, speaker, text] = inlAnd
-      const timestamp = parseKoreanDatetime(rawDate)
-      if (timestamp) results.push({ speaker: speaker.trim(), timestamp, text: text.trim() })
+    const androidSplit = trimmed.match(ANDROID_SPLIT_RE)
+    if (androidSplit) {
+      pushMessage(
+        results,
+        androidSplit[1],
+        toDate(curYear, curMonth, curDay, androidSplit[2], Number(androidSplit[3]), Number(androidSplit[4])),
+        androidSplit[5]
+      )
       continue
+    }
+
+    if (results.length) {
+      const last = results[results.length - 1]
+      last.text = `${last.text}\n${trimmed}`.trim()
     }
   }
 

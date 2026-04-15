@@ -9,6 +9,7 @@ import type { PaperLang, WritingStyle } from '@/lib/openai/promptPipeline'
 import type { NormalizedMessage } from '@/types/conversation'
 
 export async function POST(req: NextRequest) {
+  try {
   const guest = await getGuestUser()
 
   const body = await req.json().catch(() => null)
@@ -86,4 +87,10 @@ export async function POST(req: NextRequest) {
   setGuestCookie(response, guest.guestKey)
 
   return response
+  } catch (error) {
+    console.error('[analyze] unhandled error:', error)
+    return ERRORS.INTERNAL(
+      error instanceof Error ? error.message : '분석 처리 중 오류가 발생했습니다'
+    )
+  }
 }

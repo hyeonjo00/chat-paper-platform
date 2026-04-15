@@ -18,7 +18,7 @@ const LABELS: Record<PaperLang, Record<string, string>> = {
   ja: { abstract: '要旨', introduction: '序論', methods: '研究方法', results: '結果', discussion: '考察', conclusion: '結論' },
 }
 
-const ORDERED_SECTIONS: (keyof Omit<GeneratedPaper, 'title'>)[] = [
+const ORDERED_SECTIONS: (keyof Omit<GeneratedPaper, 'title' | 'relationship'>)[] = [
   'abstract', 'introduction', 'methods', 'results', 'discussion', 'conclusion',
 ]
 

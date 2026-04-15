@@ -52,6 +52,9 @@ export default async function PaperReader({ params }: PageProps) {
       results: true,
       discussion: true,
       conclusion: true,
+      relationshipType: true,
+      relationshipIssues: true,
+      affectionScores: true,
     },
   })
 
@@ -166,6 +169,18 @@ export default async function PaperReader({ params }: PageProps) {
               />
             </div>
           </SurfaceCard>
+
+          {paper.relationshipType ? (() => {
+            const relIssues = paper.relationshipIssues as string | null
+            const relScores = paper.affectionScores as { speakerId: string; score: number; reasoning: string }[] | null
+            return (
+              <RelationshipCard
+                relationshipType={paper.relationshipType as string}
+                issues={relIssues ? relIssues.split('\n').filter(Boolean) : []}
+                affectionScores={relScores ?? null}
+              />
+            )
+          })() : null}
 
           <div className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)] xl:items-start">
             <StickyColumn>
@@ -287,6 +302,78 @@ function MetaPill({ label, value }: { label: string; value?: string }) {
       <span className="text-slate-400 dark:text-slate-500">{label}</span>
       <span className="text-slate-900 dark:text-slate-100">{value}</span>
     </span>
+  )
+}
+
+function RelationshipCard({
+  relationshipType,
+  issues,
+  affectionScores,
+}: {
+  relationshipType: string
+  issues: string[]
+  affectionScores: { speakerId: string; score: number; reasoning: string }[] | null
+}) {
+  const isRomantic = !!affectionScores?.length
+
+  return (
+    <SurfaceCard className="p-6 sm:p-8">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
+        {/* 관계 유형 */}
+        <div className="min-w-[140px]">
+          <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-400 dark:text-slate-500">관계 유형</p>
+          <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950 dark:text-slate-100">
+            {relationshipType}
+          </p>
+        </div>
+
+        {/* 호감도 (연인일 때만) */}
+        {isRomantic && affectionScores ? (
+          <div className="flex-1">
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-400 dark:text-slate-500">호감도 추정</p>
+            <div className="mt-3 space-y-3">
+              {affectionScores.map((s) => (
+                <div key={s.speakerId}>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-700 dark:text-slate-300">{s.speakerId}</span>
+                    <span className="font-semibold text-rose-500 dark:text-rose-400">{s.score}%</span>
+                  </div>
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/[0.06]">
+                    <div
+                      className="h-full rounded-full bg-rose-400 transition-all dark:bg-rose-500"
+                      style={{ width: `${s.score}%` }}
+                    />
+                  </div>
+                  {s.reasoning ? (
+                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{s.reasoning}</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/* 문제점 */}
+        {issues.length > 0 ? (
+          <div className="flex-1">
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-amber-500 dark:text-amber-400">발견된 문제점</p>
+            <ul className="mt-3 space-y-2">
+              {issues.map((issue, i) => (
+                <li key={i} className="flex items-start gap-2 rounded-[14px] border border-amber-200/80 bg-amber-50/80 px-3 py-2.5 text-sm text-amber-800 dark:border-amber-400/20 dark:bg-amber-500/[0.06] dark:text-amber-300">
+                  <span className="mt-0.5 shrink-0 text-amber-400">⚠</span>
+                  {issue}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="flex-1">
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-emerald-500 dark:text-emerald-400">관계 상태</p>
+            <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-300">특별한 문제점이 발견되지 않았습니다.</p>
+          </div>
+        )}
+      </div>
+    </SurfaceCard>
   )
 }
 

@@ -55,6 +55,9 @@ export interface ChunkSummary {
   sentimentLabel: 'positive' | 'neutral' | 'negative' | 'mixed'
   keyEvents: string[]
   speakerDynamics: string
+  speakerCount: number
+  speakerProfiles: { speakerId: string; traits: string; messageShare: string }[]
+  groupDynamics?: string
 }
 
 export async function summariseChunk(
@@ -65,6 +68,12 @@ export async function summariseChunk(
   const langNote = lang === 'ko' ? '한국어로 답하라.' : lang === 'ja' ? '日本語で答えてください。' : 'Answer in English.'
   const dialogue = messages.map(m => `${m.speakerId}: ${m.text}`).join('\n')
 
+  const speakerIds = Array.from(new Set(messages.map(m => m.speakerId)))
+  const isGroup = speakerIds.length > 2
+  const speakerNote = isGroup
+    ? `이 대화는 ${speakerIds.length}명이 참여하는 단체 채팅방입니다. 각 화자의 역할, 발화 비중, 상호작용 패턴을 개별적으로 분석하라.`
+    : `이 대화는 1:1 대화입니다. 두 화자 간의 관계 역학을 분석하라.`
+
   const content = await callWithRetry(() =>
     openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -73,8 +82,19 @@ export async function summariseChunk(
       messages: [
         {
           role: 'system',
-          content: `You are a conversation analyst. Context: ${contextHeader}. ${langNote}
-Return JSON: {"topics":["string"],"sentimentLabel":"positive|neutral|negative|mixed","keyEvents":["string"],"speakerDynamics":"string"}`,
+          content: `You are a conversation analyst. Context: ${contextHeader}. ${speakerNote} ${langNote}
+Return JSON:
+{
+  "topics": ["string"],
+  "sentimentLabel": "positive|neutral|negative|mixed",
+  "keyEvents": ["string"],
+  "speakerDynamics": "string (overall group/pair interaction summary)",
+  "speakerCount": number,
+  "speakerProfiles": [
+    { "speakerId": "string", "traits": "string (communication style, role in group)", "messageShare": "string (e.g. 35%)" }
+  ],
+  "groupDynamics": "string (for group chats: subgroup formations, dominant speakers, conflict/consensus patterns)"
+}`,
         },
         { role: 'user', content: dialogue },
       ],
@@ -84,7 +104,7 @@ Return JSON: {"topics":["string"],"sentimentLabel":"positive|neutral|negative|mi
   try {
     return JSON.parse(content.choices[0].message.content ?? '{}') as ChunkSummary
   } catch {
-    return { topics: [], sentimentLabel: 'neutral', keyEvents: [], speakerDynamics: '' }
+    return { topics: [], sentimentLabel: 'neutral', keyEvents: [], speakerDynamics: '', speakerCount: speakerIds.length, speakerProfiles: [] }
   }
 }
 
@@ -116,16 +136,21 @@ export interface GenerateSectionOptions {
   analysisContext: string   // JSON string of aggregated ChunkSummary[]
   lang: PaperLang
   style: WritingStyle
+  speakerCount?: number
   existingSection?: string  // pass for iterative refinement
 }
 
 export async function generatePaperSection(opts: GenerateSectionOptions): Promise<string> {
-  const { section, analysisContext, lang, style, existingSection } = opts
+  const { section, analysisContext, lang, style, speakerCount = 2, existingSection } = opts
 
   const langInstr =
     lang === 'ko' ? '한국어 학술 문체로 작성하라.' :
     lang === 'ja' ? '日本語の学術文体で書いてください。' :
     'Write in formal academic English.'
+
+  const groupNote = speakerCount > 2
+    ? `This is a GROUP CHAT with ${speakerCount} participants. Analyse multi-party interaction dynamics, subgroup formations, dominant/passive speakers, and collective sentiment patterns. Reference individual speaker profiles where relevant.`
+    : `This is a 1-on-1 conversation between 2 participants. Analyse dyadic interaction and relational dynamics.`
 
   const refineNote = existingSection
     ? `\n\nExisting draft to improve:\n${existingSection}`
@@ -140,6 +165,7 @@ export async function generatePaperSection(opts: GenerateSectionOptions): Promis
           role: 'system',
           content: `You are an academic writer with a PhD.
 Style: ${STYLE_NOTES[style]}
+Conversation type: ${groupNote}
 Task: ${SECTION_INSTRUCTIONS[section]}
 ${langInstr}
 Preserve any quoted dialogue blocks exactly as provided. Use [Author, Year] for citation placeholders.${refineNote}`,

@@ -21,6 +21,9 @@ export interface GeneratedPaper {
 export async function generatePaper(input: PaperInput): Promise<GeneratedPaper> {
   const { messages, lang, style } = input
 
+  // 화자 수 파악 (1:1 vs 단체 채팅 구분)
+  const speakerCount = new Set(messages.map(m => m.speakerId)).size
+
   // 1. Chunk and summarise sequentially to avoid TPM rate limits
   const chunks = chunkMessages(messages)
   const summaries: ChunkSummary[] = []
@@ -37,17 +40,17 @@ export async function generatePaper(input: PaperInput): Promise<GeneratedPaper> 
   const fullContext = JSON.stringify(summaries)
   const analysisContext = fullContext.length > 30000 ? fullContext.slice(0, 30000) + '...(truncated)' : fullContext
 
-  // 2. Generate sections in batches of 3 to balance speed and TPM limits
+  // 2. Generate sections in batches to balance speed and TPM limits
   const [title, abstract, introduction] = await Promise.all([
-    generatePaperSection({ section: 'title',        analysisContext, lang, style }),
-    generatePaperSection({ section: 'abstract',     analysisContext, lang, style }),
-    generatePaperSection({ section: 'introduction', analysisContext, lang, style }),
+    generatePaperSection({ section: 'title',        analysisContext, lang, style, speakerCount }),
+    generatePaperSection({ section: 'abstract',     analysisContext, lang, style, speakerCount }),
+    generatePaperSection({ section: 'introduction', analysisContext, lang, style, speakerCount }),
   ])
   const [methods, results, discussion, conclusion] = await Promise.all([
-    generatePaperSection({ section: 'methods',      analysisContext, lang, style }),
-    generatePaperSection({ section: 'results',      analysisContext, lang, style }),
-    generatePaperSection({ section: 'discussion',   analysisContext, lang, style }),
-    generatePaperSection({ section: 'conclusion',   analysisContext, lang, style }),
+    generatePaperSection({ section: 'methods',      analysisContext, lang, style, speakerCount }),
+    generatePaperSection({ section: 'results',      analysisContext, lang, style, speakerCount }),
+    generatePaperSection({ section: 'discussion',   analysisContext, lang, style, speakerCount }),
+    generatePaperSection({ section: 'conclusion',   analysisContext, lang, style, speakerCount }),
   ])
 
   return { title, abstract, introduction, methods, results, discussion, conclusion }

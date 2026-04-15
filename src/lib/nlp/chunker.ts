@@ -16,12 +16,12 @@ export interface ChunkConfig {
 }
 
 const DEFAULT_CONFIG: ChunkConfig = {
-  chunkTokens: 6000,
-  overlapTokens: 128,
-  reservedForPrompt: 2000,
+  chunkTokens: 3000,
+  overlapTokens: 64,
+  reservedForPrompt: 1000,
 }
 
-const MAX_CHUNKS = 8
+const MAX_CHUNKS = 10
 
 // Rough token estimation: Korean ~1.5 tok/char, Latin ~0.25 tok/char
 export function estimateTokens(text: string): number {

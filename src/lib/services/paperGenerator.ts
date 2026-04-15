@@ -33,9 +33,9 @@ export async function generatePaper(input: PaperInput): Promise<GeneratedPaper> 
     summaries.push(summary)
   }
 
-  // Truncate analysisContext to ~60k chars to stay within model context limit
+  // Truncate analysisContext to ~30k chars to stay well within model context limit
   const fullContext = JSON.stringify(summaries)
-  const analysisContext = fullContext.length > 60000 ? fullContext.slice(0, 60000) + '...(truncated)' : fullContext
+  const analysisContext = fullContext.length > 30000 ? fullContext.slice(0, 30000) + '...(truncated)' : fullContext
 
   // 2. Generate sections sequentially to avoid TPM rate limits
   const title        = await generatePaperSection({ section: 'title',        analysisContext, lang, style })

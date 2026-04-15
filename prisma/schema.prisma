@@ -74,9 +74,12 @@ model Paper {
   results      String?      @db.Text
   discussion   String?      @db.Text
   conclusion   String?      @db.Text
-  references   Json?
-  appendix     String?      @db.Text
-  generatedAt  DateTime?
+  references        Json?
+  appendix          String?      @db.Text
+  relationshipType  String?
+  relationshipIssues String?     @db.Text
+  affectionScores   Json?
+  generatedAt       DateTime?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 

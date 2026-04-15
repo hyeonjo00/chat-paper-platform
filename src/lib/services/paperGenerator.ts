@@ -1,4 +1,4 @@
-import { summariseChunk, generatePaperSection, PaperLang, WritingStyle, ChunkSummary } from '@/lib/openai/promptPipeline'
+import { summariseChunk, generatePaperSection, analyseRelationship, PaperLang, WritingStyle, ChunkSummary, RelationshipAnalysis } from '@/lib/openai/promptPipeline'
 import { chunkMessages } from '@/lib/nlp/chunker'
 import { NormalizedMessage } from '@/types/conversation'
 
@@ -16,6 +16,7 @@ export interface GeneratedPaper {
   results: string
   discussion: string
   conclusion: string
+  relationship: RelationshipAnalysis
 }
 
 export async function generatePaper(input: PaperInput): Promise<GeneratedPaper> {
@@ -24,7 +25,13 @@ export async function generatePaper(input: PaperInput): Promise<GeneratedPaper> 
   // 화자 수 파악 (1:1 vs 단체 채팅 구분)
   const speakerCount = new Set(messages.map(m => m.speakerId)).size
 
-  // 1. Chunk and summarise sequentially to avoid TPM rate limits
+  // 1. 관계 분석 + 청크 요약 병렬 시작
+  const allMsgsSample = messages.map(m => ({ speakerId: m.speakerId, text: m.text }))
+  const [relationship] = await Promise.all([
+    analyseRelationship(allMsgsSample, lang),
+  ])
+
+  // 2. Chunk and summarise sequentially to avoid TPM rate limits
   const chunks = chunkMessages(messages)
   const summaries: ChunkSummary[] = []
   for (const c of chunks) {
@@ -53,5 +60,5 @@ export async function generatePaper(input: PaperInput): Promise<GeneratedPaper> 
     generatePaperSection({ section: 'conclusion',   analysisContext, lang, style, speakerCount }),
   ])
 
-  return { title, abstract, introduction, methods, results, discussion, conclusion }
+  return { title, abstract, introduction, methods, results, discussion, conclusion, relationship }
 }

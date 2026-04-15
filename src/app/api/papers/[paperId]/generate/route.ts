@@ -76,6 +76,7 @@ export async function POST(
     }
 
     // Persist sections and mark COMPLETED
+    const rel = generated.relationship
     const updated = await prisma.paper.update({
       where: { id: params.paperId },
       data: {
@@ -87,6 +88,9 @@ export async function POST(
         results:      generated.results,
         discussion:   generated.discussion,
         conclusion:   generated.conclusion,
+        relationshipType:   rel.relationshipType,
+        relationshipIssues: rel.hasIssues ? rel.issues.join('\n') : null,
+        affectionScores:    rel.isRomantic && rel.affectionScores ? rel.affectionScores : undefined,
         generatedAt:  new Date(),
       },
     })

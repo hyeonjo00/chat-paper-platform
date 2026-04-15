@@ -108,6 +108,61 @@ Return JSON:
   }
 }
 
+// ── Layer 2.5: Relationship Analysis ─────────────────────────────────────────
+
+export interface RelationshipAnalysis {
+  relationshipType: string   // 예: 연인, 친구, 가족, 직장동료, 온라인친구 등
+  confidence: number         // 0~1
+  issues: string[]           // 발견된 문제점 (없으면 빈 배열)
+  hasIssues: boolean
+  isRomantic: boolean
+  affectionScores?: { speakerId: string; score: number; reasoning: string }[]
+}
+
+export async function analyseRelationship(
+  messages: { speakerId: string; text: string }[],
+  lang: PaperLang
+): Promise<RelationshipAnalysis> {
+  const langNote = lang === 'ko' ? '한국어로 답하라.' : lang === 'ja' ? '日本語で答えてください。' : 'Answer in English.'
+  const sample = messages.slice(0, 200).map(m => `${m.speakerId}: ${m.text}`).join('\n')
+  const speakerIds = Array.from(new Set(messages.map(m => m.speakerId)))
+
+  const content = await callWithRetry(() =>
+    openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: `You are a relationship psychologist analyzing conversation data. ${langNote}
+Infer the relationship type and detect any communication problems.
+If romantic, estimate each person's affection level based on language patterns, response frequency, emotional expressions, and care shown.
+
+Return JSON:
+{
+  "relationshipType": "string (e.g. 연인, 친구, 가족, 직장동료, 온라인친구)",
+  "confidence": 0.0~1.0,
+  "isRomantic": boolean,
+  "hasIssues": boolean,
+  "issues": ["string"] (communication problems, conflicts, imbalance — empty array if none),
+  "affectionScores": [
+    { "speakerId": "string", "score": 0~100, "reasoning": "string" }
+  ] (only if isRomantic is true, otherwise omit or empty array)
+}`,
+        },
+        { role: 'user', content: `화자 목록: ${speakerIds.join(', ')}\n\n대화:\n${sample}` },
+      ],
+    })
+  )
+
+  try {
+    return JSON.parse(content.choices[0].message.content ?? '{}') as RelationshipAnalysis
+  } catch {
+    return { relationshipType: '알 수 없음', confidence: 0, issues: [], hasIssues: false, isRomantic: false }
+  }
+}
+
 // ── Layer 3: Paper Section Generation ────────────────────────────────────────
 
 const STYLE_NOTES: Record<WritingStyle, string> = {

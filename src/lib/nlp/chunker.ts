@@ -16,10 +16,12 @@ export interface ChunkConfig {
 }
 
 const DEFAULT_CONFIG: ChunkConfig = {
-  chunkTokens: 8000,
-  overlapTokens: 512,
-  reservedForPrompt: 4000,
+  chunkTokens: 12000,
+  overlapTokens: 256,
+  reservedForPrompt: 2000,
 }
+
+const MAX_CHUNKS = 5
 
 // Rough token estimation: Korean ~1.5 tok/char, Latin ~0.25 tok/char
 export function estimateTokens(text: string): number {
@@ -73,6 +75,23 @@ export function chunkMessages(messages: NormalizedMessage[], config?: Partial<Ch
       overlapStart--
     }
     start = overlapStart
+  }
+
+  // Limit to MAX_CHUNKS by merging excess chunks
+  while (chunks.length > MAX_CHUNKS) {
+    // Merge the two smallest adjacent chunks
+    let minIdx = 0
+    let minTokens = chunks[0].estimatedTokens + chunks[1].estimatedTokens
+    for (let i = 1; i < chunks.length - 1; i++) {
+      const combined = chunks[i].estimatedTokens + chunks[i + 1].estimatedTokens
+      if (combined < minTokens) { minTokens = combined; minIdx = i }
+    }
+    const merged = {
+      ...chunks[minIdx],
+      messages: [...chunks[minIdx].messages, ...chunks[minIdx + 1].messages],
+      estimatedTokens: minTokens,
+    }
+    chunks.splice(minIdx, 2, merged)
   }
 
   const total = chunks.length

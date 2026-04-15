@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/surface'
 import { useSitePreferences } from '@/components/ui/site-preferences-provider'
 
-type Status = 'idle' | 'uploading' | 'analyzing' | 'done' | 'error'
+type Status = 'idle' | 'uploading' | 'analyzing' | 'generating' | 'done' | 'error'
 
 const ACCEPT = '.txt,.md,.json,.zip'
 const MAX_MB = 3072
@@ -30,11 +30,15 @@ const VERCEL_SAFE_TEXT_BYTES = VERCEL_SAFE_TEXT_MB * 1024 * 1024
 
 const PROGRESS: Record<Status, number> = {
   idle: 0,
-  uploading: 36,
-  analyzing: 88,
+  uploading: 30,
+  analyzing: 55,
+  generating: 80,
   done: 100,
   error: 0,
 }
+
+const POLL_INTERVAL_MS = 3000
+const POLL_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
 
 function fileExtension(name: string) {
   return name.split('.').pop()?.toLowerCase() ?? ''
@@ -94,7 +98,7 @@ export default function UploadPage() {
   const [paperId, setPaperId] = useState('')
   const [dragOver, setDragOver] = useState(false)
 
-  const isBusy = status === 'uploading' || status === 'analyzing'
+  const isBusy = status === 'uploading' || status === 'analyzing' || status === 'generating'
   const progress = PROGRESS[status]
   const labels = copy.upload
 
@@ -138,6 +142,22 @@ export default function UploadPage() {
     setFile(nextFile)
   }
 
+  async function pollPaperStatus(id: string): Promise<void> {
+    const deadline = Date.now() + POLL_TIMEOUT_MS
+    while (Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
+      const res = await fetch(`/api/papers/${id}`)
+      if (!res.ok) throw new Error(labels.errors.analyzeFailed)
+      const json = await res.json()
+      if (!json.ok) throw new Error(json.error?.message ?? labels.errors.analyzeFailed)
+      const paperStatus: string = json.data.status
+      if (paperStatus === 'COMPLETED') return
+      if (paperStatus === 'FAILED') throw new Error(labels.errors.analyzeFailed)
+      // still PROCESSING — keep polling
+    }
+    throw new Error(labels.errors.analyzeFailed)
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!file) return
@@ -145,6 +165,7 @@ export default function UploadPage() {
     setError('')
 
     try {
+      // Step 1: upload file
       setStatus('uploading')
       const preparedFile = await prepareUploadFile(file, labels.errors)
       const formData = new FormData()
@@ -160,6 +181,7 @@ export default function UploadPage() {
         throw new Error(uploadJson.error?.message ?? labels.errors.uploadFailed)
       }
 
+      // Step 2: analyze (language detection + create PROCESSING paper)
       setStatus('analyzing')
       const analyzeResponse = await fetch('/api/analyze', {
         method: 'POST',
@@ -172,7 +194,18 @@ export default function UploadPage() {
         throw new Error(analyzeJson.error?.message ?? labels.errors.analyzeFailed)
       }
 
-      setPaperId(analyzeJson.data.paperId)
+      const newPaperId: string = analyzeJson.data.paperId
+
+      // Step 3: trigger background generation
+      setStatus('generating')
+      fetch(`/api/papers/${newPaperId}/generate`, { method: 'POST' }).catch(() => {
+        // generation errors will surface via polling
+      })
+
+      // Step 4: poll until COMPLETED or FAILED
+      await pollPaperStatus(newPaperId)
+
+      setPaperId(newPaperId)
       setStatus('done')
     } catch (submissionError) {
       setError(
@@ -371,7 +404,9 @@ export default function UploadPage() {
                       <span className="font-medium text-slate-600 dark:text-slate-300">
                         {status === 'uploading'
                           ? labels.statusUploading
-                          : labels.statusAnalyzing}
+                          : status === 'analyzing'
+                          ? labels.statusAnalyzing
+                          : labels.statusGenerating}
                       </span>
                       <span className="text-slate-950 dark:text-sky-300">{progress}%</span>
                     </div>
@@ -384,7 +419,9 @@ export default function UploadPage() {
                     <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                       {status === 'uploading'
                         ? labels.statusUploadingHint
-                        : labels.statusAnalyzingHint}
+                        : status === 'analyzing'
+                        ? labels.statusAnalyzingHint
+                        : labels.statusGeneratingHint}
                     </p>
                   </div>
                 ) : null}
@@ -394,7 +431,9 @@ export default function UploadPage() {
                     {isBusy
                       ? status === 'uploading'
                         ? labels.statusUploading
-                        : labels.statusAnalyzing
+                        : status === 'analyzing'
+                        ? labels.statusAnalyzing
+                        : labels.statusGenerating
                       : labels.submit}
                   </ActionButton>
                   {file && !isBusy ? (

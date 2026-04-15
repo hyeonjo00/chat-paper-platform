@@ -65,7 +65,7 @@ model Paper {
   uploadId     String
   language     Language
   writingStyle WritingStyle
-  status       PaperStatus  @default(DRAFTING)
+  status       PaperStatus  @default(PROCESSING)
   title        String?
   abstract     String?      @db.Text
   introduction String?      @db.Text
@@ -122,7 +122,7 @@ enum Language {
 }
 
 enum PaperStatus {
-  DRAFTING
+  PROCESSING
   COMPLETED
   FAILED
 }

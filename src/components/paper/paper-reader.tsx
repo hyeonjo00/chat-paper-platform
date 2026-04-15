@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
-import { notFound, redirect } from 'next/navigation'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/options'
+import { notFound } from 'next/navigation'
+import { getGuestUser } from '@/lib/auth/guest-user'
 import { prisma } from '@/lib/db/prisma'
 import { SITE_LOCALE_COOKIE, getSiteCopy, resolveSiteLocale } from '@/lib/ui/site-copy'
 import {
@@ -32,11 +31,7 @@ const SECTION_ORDER = [
 type PageProps = { params: { paperId: string } }
 
 export default async function PaperReader({ params }: PageProps) {
-  const session = await getServerSession(authOptions)
-
-  if (!session?.user?.id) {
-    redirect(`/signin?callbackUrl=${encodeURIComponent(`/paper/${params.paperId}`)}`)
-  }
+  const guest = await getGuestUser()
 
   const locale = resolveSiteLocale(cookies().get(SITE_LOCALE_COOKIE)?.value)
   const copy = getSiteCopy(locale)
@@ -44,7 +39,7 @@ export default async function PaperReader({ params }: PageProps) {
   const labels = copy.paper
 
   const paper = await prisma.paper.findFirst({
-    where: { id: params.paperId, userId: session.user.id },
+    where: { id: params.paperId, userId: guest.userId },
     select: {
       id: true,
       title: true,

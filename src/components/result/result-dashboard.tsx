@@ -65,16 +65,9 @@ function ResultDashboard() {
 
         try {
           const response = await fetch(`/api/papers/${paperId}`)
-          if (response.status === 401) {
-            router.push(
-              `/signin?callbackUrl=${encodeURIComponent(`/result?paperId=${paperId}`)}`
-            )
-            return
-          }
-
-        const json = await response.json()
-        if (!json.ok) {
-          throw new Error(json.error?.message ?? copy.result.fetchFailed)
+          const json = await response.json()
+          if (!json.ok) {
+            throw new Error(json.error?.message ?? copy.result.fetchFailed)
         }
 
         if (!cancelled) setResult(json.data)

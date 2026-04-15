@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/options'
 import { prisma } from '@/lib/db/prisma'
 import { ok, ERRORS } from '@/lib/api/response'
+import { getGuestUser, setGuestCookie } from '@/lib/auth/guest-user'
 import { parseKakaoTalk } from '@/lib/parsers/kakaotalk'
 import { parseAiConversation } from '@/lib/parsers/aiConversation'
 import { anonymizeMessages } from '@/lib/privacy/anonymizer'
@@ -23,8 +22,7 @@ function detectUploadType(filename: string, content: string): 'KAKAO' | 'AI_CONV
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) return ERRORS.UNAUTHORIZED()
+  const guest = await getGuestUser()
 
   const formData = await req.formData().catch(() => null)
   if (!formData) return ERRORS.VALIDATION('multipart/form-data required')
@@ -81,7 +79,7 @@ export async function POST(req: NextRequest) {
   // Persist
   const upload = await prisma.upload.create({
     data: {
-      userId: session.user.id,
+      userId: guest.userId,
       type: resolvedType,
       originalFilename: file.name,
       storagePath: '',       // file stored in-DB as parsed messages; raw not persisted
@@ -101,11 +99,15 @@ export async function POST(req: NextRequest) {
     include: { _count: { select: { parsedMessages: true } } },
   })
 
-  return ok({
+  const response = ok({
     uploadId: upload.id,
     type: resolvedType,
     filename: file.name,
     messageCount: upload._count.parsedMessages,
     parseStatus: 'COMPLETED',
   })
+
+  setGuestCookie(response, guest.guestKey)
+
+  return response
 }

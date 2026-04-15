@@ -1,6 +1,5 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/options'
 import { ok, ERRORS } from '@/lib/api/response'
+import { getGuestUser, setGuestCookie } from '@/lib/auth/guest-user'
 import { prisma } from '@/lib/db/prisma'
 
 const SCORE_BY_LANGUAGE = {
@@ -23,8 +22,7 @@ export async function GET(
   _req: Request,
   { params }: { params: { paperId: string } }
 ) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) return ERRORS.UNAUTHORIZED()
+  const guest = await getGuestUser()
 
   const paper = await prisma.paper.findUnique({
     where: { id: params.paperId },
@@ -46,11 +44,11 @@ export async function GET(
   })
 
   if (!paper) return ERRORS.NOT_FOUND('논문을 찾을 수 없습니다')
-  if (paper.userId !== session.user.id) return ERRORS.FORBIDDEN()
+  if (paper.userId !== guest.userId) return ERRORS.FORBIDDEN()
 
   const sections = SECTION_KEYS.filter((key) => Boolean(paper[key]))
 
-  return ok({
+  const response = ok({
     paperId: paper.id,
     lang: paper.language.toLowerCase(),
     style: paper.writingStyle.toLowerCase(),
@@ -69,4 +67,8 @@ export async function GET(
       createdAt: paper.createdAt.toISOString(),
     },
   })
+
+  setGuestCookie(response, guest.guestKey)
+
+  return response
 }

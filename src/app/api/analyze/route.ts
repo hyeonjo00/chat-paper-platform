@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/options'
 import { prisma } from '@/lib/db/prisma'
 import { ok, ERRORS } from '@/lib/api/response'
+import { getGuestUser, setGuestCookie } from '@/lib/auth/guest-user'
 import { anonymizeMessages } from '@/lib/privacy/anonymizer'
 import { detectFromMessages } from '@/lib/nlp/languageDetector'
 import { generatePaper } from '@/lib/services/paperGenerator'
@@ -10,8 +9,7 @@ import type { PaperLang, WritingStyle } from '@/lib/openai/promptPipeline'
 import type { NormalizedMessage } from '@/types/conversation'
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) return ERRORS.UNAUTHORIZED()
+  const guest = await getGuestUser()
 
   const body = await req.json().catch(() => null)
   if (!body?.uploadId) return ERRORS.VALIDATION('uploadId required')
@@ -28,7 +26,7 @@ export async function POST(req: NextRequest) {
     include: { parsedMessages: { orderBy: { timestamp: 'asc' } } },
   })
   if (!upload) return ERRORS.NOT_FOUND('업로드를 찾을 수 없습니다')
-  if (upload.userId !== session.user.id) return ERRORS.FORBIDDEN()
+  if (upload.userId !== guest.userId) return ERRORS.FORBIDDEN()
   if (!upload.parsedMessages.length) return ERRORS.VALIDATION('파싱된 메시지가 없습니다')
 
   // 2. Anonymise (re-run to catch any missed PII from earlier parse)
@@ -60,7 +58,7 @@ export async function POST(req: NextRequest) {
   // 5. Persist paper
   const created = await prisma.paper.create({
     data: {
-      userId: session.user.id,
+      userId: guest.userId,
       uploadId,
       language: lang.toUpperCase() as 'KO' | 'EN' | 'JA',
       writingStyle: style.toUpperCase() as never,
@@ -76,7 +74,7 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  return ok({
+  const response = ok({
     paperId: created.id,
     lang,
     style,
@@ -84,4 +82,8 @@ export async function POST(req: NextRequest) {
     isMixed: detection.isMixed,
     sections: Object.keys(paper),
   })
+
+  setGuestCookie(response, guest.guestKey)
+
+  return response
 }

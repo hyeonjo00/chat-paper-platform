@@ -150,17 +150,10 @@ export default function UploadPage() {
       const formData = new FormData()
       formData.append('file', preparedFile, preparedFile.name)
 
-      const signInHref = '/signin?callbackUrl=%2Fupload'
-
       const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       })
-
-      if (uploadResponse.status === 401) {
-        router.push(signInHref)
-        return
-      }
 
       const uploadJson = await uploadResponse.json()
       if (!uploadResponse.ok || !uploadJson.ok) {
@@ -173,11 +166,6 @@ export default function UploadPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uploadId: uploadJson.data.uploadId }),
       })
-
-      if (analyzeResponse.status === 401) {
-        router.push(signInHref)
-        return
-      }
 
       const analyzeJson = await analyzeResponse.json()
       if (!analyzeResponse.ok || !analyzeJson.ok) {

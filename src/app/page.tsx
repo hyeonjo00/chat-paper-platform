@@ -81,9 +81,11 @@ export default function Home() {
           </div>
 
           <div id="overview" className="grid gap-4 md:grid-cols-3">
-            {copy.home.features.map((feature) => (
+            {copy.home.features.map((feature, index) => (
               <SurfaceCard key={feature.title} tone="soft" className="p-5 sm:p-6">
-                <div className="h-10 w-10 rounded-[16px] border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04]" />
+                <FeatureIconFrame>
+                  {index === 0 ? <UploadFlowIcon /> : index === 1 ? <DashboardIcon /> : <ReaderIcon />}
+                </FeatureIconFrame>
                 <p className="mt-5 text-xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-slate-100">
                   {feature.title}
                 </p>
@@ -107,5 +109,39 @@ function HeaderLink({ href, children }: { href: string; children: ReactNode }) {
     >
       {children}
     </Link>
+  )
+}
+
+function FeatureIconFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex h-10 w-10 items-center justify-center rounded-[16px] border border-slate-200/80 bg-white/90 text-slate-700 shadow-[0_10px_30px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/[0.05] dark:text-sky-300 dark:shadow-none">
+      {children}
+    </div>
+  )
+}
+
+function UploadFlowIcon() {
+  return (
+    <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V6m0 0l-3.5 3.5M12 6l3.5 3.5M5 18.5h14" />
+    </svg>
+  )
+}
+
+function DashboardIcon() {
+  return (
+    <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 17.5h14M7 15l3-3 2.5 2.5L17 10" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17 10h-3m3 0v3" />
+    </svg>
+  )
+}
+
+function ReaderIcon() {
+  return (
+    <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 5.5h8a2 2 0 012 2v11l-3-1.5-3 1.5-3-1.5-3 1.5v-11a2 2 0 012-2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 9.5h5M9.5 12.5h5" />
+    </svg>
   )
 }

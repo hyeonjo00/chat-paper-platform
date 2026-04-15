@@ -35,17 +35,14 @@ export async function generatePaper(input: PaperInput): Promise<GeneratedPaper> 
 
   const analysisContext = JSON.stringify(summaries)
 
-  // 2. Generate all sections (title + 6 body sections) in parallel
-  const [title, abstract, introduction, methods, results, discussion, conclusion] =
-    await Promise.all([
-      generatePaperSection({ section: 'title',        analysisContext, lang, style }),
-      generatePaperSection({ section: 'abstract',     analysisContext, lang, style }),
-      generatePaperSection({ section: 'introduction', analysisContext, lang, style }),
-      generatePaperSection({ section: 'methods',      analysisContext, lang, style }),
-      generatePaperSection({ section: 'results',      analysisContext, lang, style }),
-      generatePaperSection({ section: 'discussion',   analysisContext, lang, style }),
-      generatePaperSection({ section: 'conclusion',   analysisContext, lang, style }),
-    ])
+  // 2. Generate sections sequentially to avoid TPM rate limits
+  const title        = await generatePaperSection({ section: 'title',        analysisContext, lang, style })
+  const abstract     = await generatePaperSection({ section: 'abstract',     analysisContext, lang, style })
+  const introduction = await generatePaperSection({ section: 'introduction', analysisContext, lang, style })
+  const methods      = await generatePaperSection({ section: 'methods',      analysisContext, lang, style })
+  const results      = await generatePaperSection({ section: 'results',      analysisContext, lang, style })
+  const discussion   = await generatePaperSection({ section: 'discussion',   analysisContext, lang, style })
+  const conclusion   = await generatePaperSection({ section: 'conclusion',   analysisContext, lang, style })
 
   return { title, abstract, introduction, methods, results, discussion, conclusion }
 }

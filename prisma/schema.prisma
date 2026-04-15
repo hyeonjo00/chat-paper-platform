@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  uploads Upload[]
+  papers  Paper[]
+
+  @@map("users")
+}
+
+model Upload {
+  id               String      @id @default(cuid())
+  userId           String
+  type             UploadType
+  originalFilename String
+  storagePath      String
+  sizeBytes        Int
+  uploadedAt       DateTime    @default(now())
+  parseStatus      ParseStatus @default(PENDING)
+  parsedAt         DateTime?
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parsedMessages  ParsedMessage[]
+  papers          Paper[]
+
+  @@index([userId])
+  @@map("uploads")
+}
+
+model ParsedMessage {
+  id          String   @id @default(cuid())
+  uploadId    String
+  speakerId   String
+  timestamp   DateTime
+  text        String   @db.Text
+  lang        String?
+  tokenCount  Int?
+  createdAt   DateTime @default(now())
+
+  upload Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@index([uploadId])
+  @@index([uploadId, timestamp])
+  @@map("parsed_messages")
+}
+
+model Paper {
+  id           String       @id @default(cuid())
+  userId       String
+  uploadId     String
+  language     Language
+  writingStyle WritingStyle
+  status       PaperStatus  @default(DRAFTING)
+  title        String?
+  abstract     String?      @db.Text
+  introduction String?      @db.Text
+  relatedWork  String?      @db.Text
+  methods      String?      @db.Text
+  results      String?      @db.Text
+  discussion   String?      @db.Text
+  conclusion   String?      @db.Text
+  references   Json?
+  appendix     String?      @db.Text
+  generatedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  upload  Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  exports Export[]
+
+  @@index([userId])
+  @@index([uploadId])
+  @@map("papers")
+}
+
+model Export {
+  id         String       @id @default(cuid())
+  paperId    String
+  format     ExportFormat
+  storagePath String
+  sizeBytes  Int?
+  createdAt  DateTime     @default(now())
+
+  paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@index([paperId])
+  @@map("exports")
+}
+
+enum UploadType {
+  KAKAO
+  AI_CONVERSATION
+}
+
+enum ParseStatus {
+  PENDING
+  PARSING
+  COMPLETED
+  FAILED
+}
+
+enum Language {
+  KO
+  EN
+  JA
+}
+
+enum PaperStatus {
+  DRAFTING
+  COMPLETED
+  FAILED
+}
+
+enum WritingStyle {
+  PSYCHOLOGY_PAPER
+  COMMUNICATION_ANALYSIS
+  RELATIONSHIP_DYNAMICS
+  SOCIOLOGY
+  BEHAVIORAL_SCIENCE
+  COMPUTATIONAL_TEXT
+  BIOINFORMATICS
+}
+
+enum ExportFormat {
+  PDF
+  DOCX
+}

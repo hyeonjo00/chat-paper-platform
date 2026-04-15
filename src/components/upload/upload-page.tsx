@@ -7,6 +7,7 @@ import type {
   KeyboardEvent,
 } from 'react'
 import { useRef, useState } from 'react'
+import JSZip from 'jszip'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -24,6 +25,8 @@ type Status = 'idle' | 'uploading' | 'analyzing' | 'done' | 'error'
 
 const ACCEPT = '.txt,.md,.json,.zip'
 const MAX_MB = 3072
+const VERCEL_SAFE_TEXT_MB = 4
+const VERCEL_SAFE_TEXT_BYTES = VERCEL_SAFE_TEXT_MB * 1024 * 1024
 
 const PROGRESS: Record<Status, number> = {
   idle: 0,
@@ -31,6 +34,53 @@ const PROGRESS: Record<Status, number> = {
   analyzing: 88,
   done: 100,
   error: 0,
+}
+
+function fileExtension(name: string) {
+  return name.split('.').pop()?.toLowerCase() ?? ''
+}
+
+async function prepareUploadFile(
+  input: File,
+  errors: {
+    zipMissingText: string
+    zipTooLarge: (maxMb: number) => string
+    zipExtractFailed: string
+  }
+) {
+  if (fileExtension(input.name) !== 'zip') return input
+
+  try {
+    const zip = await JSZip.loadAsync(input)
+    const txtEntries = Object.values(zip.files).filter(
+      (entry) => !entry.dir && entry.name.toLowerCase().endsWith('.txt')
+    )
+
+    if (!txtEntries.length) {
+      throw new Error(errors.zipMissingText)
+    }
+
+    const candidates = await Promise.all(
+      txtEntries.map(async (entry) => ({
+        name: entry.name.split('/').pop() ?? entry.name,
+        text: (await entry.async('string')).replace(/^\uFEFF/, ''),
+      }))
+    )
+
+    const selected = candidates.sort((a, b) => b.text.length - a.text.length)[0]
+    const prepared = new File([selected.text], selected.name, {
+      type: 'text/plain;charset=utf-8',
+    })
+
+    if (prepared.size > VERCEL_SAFE_TEXT_BYTES) {
+      throw new Error(errors.zipTooLarge(VERCEL_SAFE_TEXT_MB))
+    }
+
+    return prepared
+  } catch (error) {
+    if (error instanceof Error) throw error
+    throw new Error(errors.zipExtractFailed)
+  }
 }
 
 export default function UploadPage() {
@@ -79,8 +129,8 @@ export default function UploadPage() {
       return
     }
 
-    const ext = nextFile.name.split('.').pop()?.toLowerCase()
-    if (!['txt', 'md', 'json', 'zip'].includes(ext ?? '')) {
+    const ext = fileExtension(nextFile.name)
+    if (!['txt', 'md', 'json', 'zip'].includes(ext)) {
       setError(labels.errors.invalidType)
       return
     }
@@ -96,8 +146,9 @@ export default function UploadPage() {
 
     try {
       setStatus('uploading')
+      const preparedFile = await prepareUploadFile(file, labels.errors)
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', preparedFile, preparedFile.name)
 
       const signInHref = '/signin?callbackUrl=%2Fupload'
 

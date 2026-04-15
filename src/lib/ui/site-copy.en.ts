@@ -88,7 +88,7 @@ export const enCopy = {
       ['Speed', 'Analyze right after upload'],
     ],
     formTitle: 'Upload',
-    formDescription: 'Click or drag a file here.',
+    formDescription: 'Click or drag a file here. ZIP uploads extract only the chat text.',
     stateReady: 'Ready',
     stateDrop: 'Drop here',
     stateDropHint: 'Upload starts right away.',
@@ -96,7 +96,7 @@ export const enCopy = {
     stateAddHint: 'Click or drag',
     statusUploading: 'Uploading',
     statusAnalyzing: 'Analyzing',
-    statusUploadingHint: 'Sending your file.',
+    statusUploadingHint: 'Preparing the chat text and sending the file.',
     statusAnalyzingHint: 'Generating the paper draft.',
     submit: 'Analyze',
     retry: 'Retry',
@@ -107,6 +107,10 @@ export const enCopy = {
     errors: {
       maxSize: (maxMb: number) => `Files must be ${Math.floor(maxMb / 1024)}GB or smaller.`,
       invalidType: 'Only .zip .txt .md .json files are supported.',
+      zipMissingText: 'This ZIP does not contain a KakaoTalk .txt export file.',
+      zipTooLarge: (maxMb: number) =>
+        `The extracted chat text is larger than ${maxMb}MB. Upload the exported .txt file directly.`,
+      zipExtractFailed: 'Could not extract the chat text from this ZIP file.',
       uploadFailed: 'Upload failed.',
       analyzeFailed: 'Analysis failed.',
       generic: 'Something went wrong.',

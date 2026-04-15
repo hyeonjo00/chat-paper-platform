@@ -88,7 +88,7 @@ export const koCopy = {
       ['속도', '업로드 후 바로 분석'],
     ],
     formTitle: '업로드',
-    formDescription: '클릭하거나 드래그하세요.',
+    formDescription: '클릭하거나 드래그하세요. ZIP은 대화 txt만 추출해 업로드합니다.',
     stateReady: '준비 완료',
     stateDrop: '여기에 놓기',
     stateDropHint: '바로 업로드를 시작합니다.',
@@ -96,7 +96,7 @@ export const koCopy = {
     stateAddHint: '클릭 또는 드래그',
     statusUploading: '업로드 중',
     statusAnalyzing: '분석 중',
-    statusUploadingHint: '파일을 전송하고 있습니다.',
+    statusUploadingHint: '대화 txt를 준비한 뒤 업로드하고 있습니다.',
     statusAnalyzingHint: '논문 초안을 만들고 있습니다.',
     submit: '분석',
     retry: '다시',
@@ -107,6 +107,10 @@ export const koCopy = {
     errors: {
       maxSize: (maxMb: number) => `파일 크기는 ${Math.floor(maxMb / 1024)}GB 이하여야 합니다.`,
       invalidType: '.zip .txt .md .json 파일만 업로드할 수 있습니다.',
+      zipMissingText: '이 ZIP 안에는 카카오톡 대화 txt 파일이 없습니다.',
+      zipTooLarge: (maxMb: number) =>
+        `추출된 대화 txt가 ${maxMb}MB를 넘어 Vercel 업로드 한도를 초과합니다. txt 파일만 직접 올려주세요.`,
+      zipExtractFailed: '이 ZIP에서 대화 txt를 추출하지 못했습니다.',
       uploadFailed: '업로드에 실패했습니다.',
       analyzeFailed: '분석에 실패했습니다.',
       generic: '오류가 발생했습니다.',

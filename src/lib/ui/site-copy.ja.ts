@@ -88,7 +88,7 @@ export const jaCopy = {
       ['速度', 'アップロード後すぐ分析'],
     ],
     formTitle: 'アップロード',
-    formDescription: 'クリックまたはドラッグしてください。',
+    formDescription: 'クリックまたはドラッグしてください。ZIPは会話 txt だけを抽出してアップロードします。',
     stateReady: '準備完了',
     stateDrop: 'ここにドロップ',
     stateDropHint: 'すぐアップロードを開始します。',
@@ -96,7 +96,7 @@ export const jaCopy = {
     stateAddHint: 'クリックまたはドラッグ',
     statusUploading: 'アップロード中',
     statusAnalyzing: '分析中',
-    statusUploadingHint: 'ファイルを送信しています。',
+    statusUploadingHint: '会話 txt を準備してからアップロードしています。',
     statusAnalyzingHint: '論文下書きを生成しています。',
     submit: '分析',
     retry: '再選択',
@@ -107,6 +107,10 @@ export const jaCopy = {
     errors: {
       maxSize: (maxMb: number) => `ファイルサイズは ${Math.floor(maxMb / 1024)}GB 以下である必要があります。`,
       invalidType: '.zip .txt .md .json のみアップロードできます。',
+      zipMissingText: 'この ZIP には KakaoTalk の会話 txt ファイルがありません。',
+      zipTooLarge: (maxMb: number) =>
+        `抽出した会話 txt が ${maxMb}MB を超えているため、Vercel のアップロード上限を超えます。txt ファイルを直接アップロードしてください。`,
+      zipExtractFailed: 'この ZIP から会話 txt を抽出できませんでした。',
       uploadFailed: 'アップロードに失敗しました。',
       analyzeFailed: '分析に失敗しました。',
       generic: 'エラーが発生しました。',

@@ -35,7 +35,7 @@ export default async function PaperReader({ params }: PageProps) {
   const session = await getServerSession(authOptions)
 
   if (!session?.user?.id) {
-    redirect(`/api/auth/signin?callbackUrl=${encodeURIComponent(`/paper/${params.paperId}`)}`)
+    redirect(`/signin?callbackUrl=${encodeURIComponent(`/paper/${params.paperId}`)}`)
   }
 
   const locale = resolveSiteLocale(cookies().get(SITE_LOCALE_COOKIE)?.value)

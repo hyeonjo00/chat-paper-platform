@@ -63,14 +63,14 @@ function ResultDashboard() {
         return
       }
 
-      try {
-        const response = await fetch(`/api/papers/${paperId}`)
-        if (response.status === 401) {
-          router.push(
-            `/api/auth/signin?callbackUrl=${encodeURIComponent(`/result?paperId=${paperId}`)}`
-          )
-          return
-        }
+        try {
+          const response = await fetch(`/api/papers/${paperId}`)
+          if (response.status === 401) {
+            router.push(
+              `/signin?callbackUrl=${encodeURIComponent(`/result?paperId=${paperId}`)}`
+            )
+            return
+          }
 
         const json = await response.json()
         if (!json.ok) {

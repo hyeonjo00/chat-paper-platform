@@ -99,13 +99,15 @@ export default function UploadPage() {
       const formData = new FormData()
       formData.append('file', file)
 
+      const signInHref = '/signin?callbackUrl=%2Fupload'
+
       const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       })
 
       if (uploadResponse.status === 401) {
-        router.push('/api/auth/signin?callbackUrl=%2Fupload')
+        router.push(signInHref)
         return
       }
 
@@ -122,7 +124,7 @@ export default function UploadPage() {
       })
 
       if (analyzeResponse.status === 401) {
-        router.push('/api/auth/signin?callbackUrl=%2Fupload')
+        router.push(signInHref)
         return
       }
 

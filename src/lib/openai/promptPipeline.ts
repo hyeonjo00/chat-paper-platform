@@ -67,7 +67,7 @@ export async function summariseChunk(
 
   const content = await callWithRetry(() =>
     openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       temperature: 0.2,
       response_format: { type: 'json_object' },
       messages: [
@@ -133,7 +133,7 @@ export async function generatePaperSection(opts: GenerateSectionOptions): Promis
 
   const content = await callWithRetry(() =>
     openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       temperature: 0.4,
       messages: [
         {

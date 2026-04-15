@@ -20,17 +20,22 @@ Chat Paper helps users upload conversation data, analyze tone and structure, and
 
 ![Upload flow](docs/screenshots/upload-flow.png)
 
-### Secure sign-in
+### Research dashboard
 
-![Sign-in screen](docs/screenshots/signin-dark.png)
+![Research dashboard](docs/screenshots/result-dashboard.png)
+
+### Paper reader
+
+![Paper reader](docs/screenshots/paper-reader.png)
 
 ## Highlights
 
 - Korean-first premium UI with dark mode and `KO / JA / EN` language switching
 - KakaoTalk and AI conversation upload flow
 - Conversation parsing and analysis pipeline
+- Research dashboard for structure and language overview
 - Academic paper viewer with export actions
-- Next.js App Router, Prisma, NextAuth, and OpenAI integration
+- Next.js App Router, Prisma, and OpenAI integration
 
 ## Tech Stack
 
@@ -38,7 +43,6 @@ Chat Paper helps users upload conversation data, analyze tone and structure, and
 - TypeScript
 - Tailwind CSS
 - Prisma + PostgreSQL
-- NextAuth
 - OpenAI API
 
 ## Quick Start
@@ -73,10 +77,9 @@ GOOGLE_CLIENT_SECRET=
 - `/upload` upload and analysis entry
 - `/result?paperId=...` research dashboard
 - `/paper/[paperId]` academic paper reader
-- `/signin` custom auth screen
 
 ## Notes
 
-- Result and paper routes require authentication.
-- Google OAuth is optional, but its client ID and secret are needed when enabled.
+- Result and paper routes are tied to a browser-scoped guest session cookie by default.
+- Google OAuth remains optional and is not required for the default upload flow.
 - PostgreSQL must be running locally before Prisma commands can succeed.

@@ -16,16 +16,23 @@ export const openai = new Proxy({} as OpenAI, {
   },
 })
 
-export async function callWithRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+export async function callWithRetry<T>(fn: () => Promise<T>, maxRetries = 5): Promise<T> {
   let lastError: Error | undefined
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await fn()
     } catch (e) {
       lastError = e instanceof Error ? e : new Error(String(e))
-      // Rate limit: exponential backoff
       if ((e as NodeJS.ErrnoException & { status?: number })?.status === 429) {
-        await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000))
+        // Retry-After 헤더에서 대기 시간 읽기, 없으면 지수 백오프
+        const retryAfterMs = (() => {
+          const msg = lastError.message ?? ''
+          const match = msg.match(/try again in ([0-9.]+)s/i)
+          if (match) return Math.ceil(parseFloat(match[1]) * 1000) + 500
+          return Math.pow(2, i) * 2000
+        })()
+        console.log(`[openai] rate limited, waiting ${retryAfterMs}ms (attempt ${i + 1}/${maxRetries})`)
+        await new Promise(r => setTimeout(r, retryAfterMs))
         continue
       }
       throw lastError

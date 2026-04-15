@@ -21,17 +21,17 @@ export interface GeneratedPaper {
 export async function generatePaper(input: PaperInput): Promise<GeneratedPaper> {
   const { messages, lang, style } = input
 
-  // 1. Chunk and summarise
+  // 1. Chunk and summarise sequentially to avoid TPM rate limits
   const chunks = chunkMessages(messages)
-  const summaries: ChunkSummary[] = await Promise.all(
-    chunks.map(c =>
-      summariseChunk(
-        c.messages.map(m => ({ speakerId: m.speakerId, text: m.text })),
-        c.contextHeader,
-        lang
-      )
+  const summaries: ChunkSummary[] = []
+  for (const c of chunks) {
+    const summary = await summariseChunk(
+      c.messages.map(m => ({ speakerId: m.speakerId, text: m.text })),
+      c.contextHeader,
+      lang
     )
-  )
+    summaries.push(summary)
+  }
 
   const analysisContext = JSON.stringify(summaries)
 

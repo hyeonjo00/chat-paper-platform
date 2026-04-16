@@ -7,7 +7,7 @@ import { parseAiConversation } from '@/lib/parsers/aiConversation'
 import { anonymizeMessages } from '@/lib/privacy/anonymizer'
 import JSZip from 'jszip'
 
-const MAX_BYTES = 3 * 1024 * 1024 * 1024 // 3 GB
+const MAX_BYTES = 10 * 1024 * 1024 * 1024 // 10 GB
 const ALLOWED_EXT = new Set(['.txt', '.md', '.json', '.zip'])
 
 function ext(name: string) {
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const uploadType = (formData.get('type') as string | null)?.toUpperCase()
 
     if (!file) return ERRORS.VALIDATION('file is required')
-    if (file.size > MAX_BYTES) return ERRORS.VALIDATION('파일 크기는 3GB 이하여야 합니다')
+    if (file.size > MAX_BYTES) return ERRORS.VALIDATION('파일 크기는 10GB 이하여야 합니다')
     if (!ALLOWED_EXT.has(ext(file.name))) return ERRORS.VALIDATION('.txt, .md, .json, .zip 파일만 지원합니다')
 
     // ZIP 파일이면 내부 .txt 추출 (카카오톡 내보내기 구조)

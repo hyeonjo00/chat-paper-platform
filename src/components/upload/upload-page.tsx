@@ -24,7 +24,7 @@ import { useSitePreferences } from '@/components/ui/site-preferences-provider'
 type Status = 'idle' | 'uploading' | 'analyzing' | 'generating' | 'done' | 'error'
 
 const ACCEPT = '.txt,.md,.json,.zip'
-const MAX_MB = 3072
+const MAX_MB = 10240
 const VERCEL_SAFE_TEXT_MB = 4
 const VERCEL_SAFE_TEXT_BYTES = VERCEL_SAFE_TEXT_MB * 1024 * 1024
 

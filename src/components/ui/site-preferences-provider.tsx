@@ -3,6 +3,7 @@
 import {
   createContext,
   startTransition,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -42,25 +43,30 @@ export function SitePreferencesProvider({
   const router = useRouter()
   const [locale, setLocaleState] = useState<SiteLocale>(initialLocale)
 
+  const setLocale = useCallback(
+    (nextLocale: SiteLocale) => {
+      setLocaleState((prev) => {
+        if (nextLocale === prev) return prev
+        persistLocale(nextLocale)
+        startTransition(() => router.refresh())
+        return nextLocale
+      })
+    },
+    [router]
+  )
+
   useEffect(() => {
     const stored = resolveSiteLocale(window.localStorage.getItem(SITE_LOCALE_COOKIE))
 
     if (stored !== locale) {
       setLocaleState(stored)
       persistLocale(stored)
-      startTransition(() => router.refresh())
       return
     }
 
     persistLocale(locale)
-  }, [locale, router])
-
-  function setLocale(nextLocale: SiteLocale) {
-    if (nextLocale === locale) return
-    setLocaleState(nextLocale)
-    persistLocale(nextLocale)
-    startTransition(() => router.refresh())
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale])
 
   const value = useMemo(
     () => ({
@@ -68,7 +74,7 @@ export function SitePreferencesProvider({
       setLocale,
       copy: getSiteCopy(locale),
     }),
-    [locale]
+    [locale, setLocale]
   )
 
   return <SitePreferencesContext.Provider value={value}>{children}</SitePreferencesContext.Provider>

@@ -28,6 +28,14 @@ Chat Paper helps users upload conversation data, analyze tone and structure, and
 
 ![Paper reader](docs/screenshots/paper-reader.png)
 
+### Mobile preview
+
+| Landing | Upload |
+| --- | --- |
+| ![Mobile landing](docs/screenshots/mobile-home.png) | ![Mobile upload](docs/screenshots/mobile-upload.png) |
+| Dashboard | Reader |
+| ![Mobile dashboard](docs/screenshots/mobile-result-dashboard.png) | ![Mobile paper reader](docs/screenshots/mobile-paper-reader.png) |
+
 ## Highlights
 
 - Korean-first premium UI with dark mode and `KO / JA / EN` language switching

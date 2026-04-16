@@ -45,6 +45,11 @@ Chat Paper helps users upload conversation data, analyze tone and structure, and
 - Academic paper viewer with export actions
 - Next.js App Router, Prisma, and OpenAI integration
 
+## Documentation
+
+- [Technical Whitepaper (EN)](docs/chat-paper-ai-technical-whitepaper-en.md)
+- [Technical Whitepaper (KO)](docs/chat-paper-ai-technical-whitepaper-ko.md)
+
 ## Tech Stack
 
 - Next.js 14

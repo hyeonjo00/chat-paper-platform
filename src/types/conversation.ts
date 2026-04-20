@@ -15,7 +15,7 @@ export interface ParsedConversationData {
   speakerCount: number
 }
 
-export type UploadFileType = 'KAKAO' | 'AI_CONVERSATION'
+export type UploadFileType = 'KAKAO' | 'AI_CONVERSATION' | 'INSTAGRAM' | 'LINE'
 
 export interface ParseOptions {
   anonymize: boolean

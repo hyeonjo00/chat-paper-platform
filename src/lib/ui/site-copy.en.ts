@@ -65,7 +65,7 @@ export const enCopy = {
     heroTitle: 'ChatPaper',
     heroLeadTop: 'Conversations',
     heroLeadBottom: 'into papers',
-    heroDescription: 'Turn KakaoTalk and AI chats into an academic draft.',
+    heroDescription: 'Turn KakaoTalk, Instagram DM, LINE, or AI chats into an academic draft.',
     primaryCta: 'Start',
     secondaryCta: 'Upload',
     plannedFlow: 'FLOW',
@@ -83,12 +83,12 @@ export const enCopy = {
     heroTitle: 'Start with upload.',
     heroDescription: 'Upload a conversation file and generation begins right away.',
     signals: [
-      ['Input', 'KakaoTalk ZIP or text'],
+      ['Input', 'KakaoTalk · Instagram · LINE · AI'],
       ['Output', 'Paper draft and reader'],
       ['Speed', 'Analyze right after upload'],
     ],
     formTitle: 'Upload',
-    formDescription: 'Click or drag a file here. ZIP uploads extract only the chat text.',
+    formDescription: 'KakaoTalk, Instagram DM, LINE, or AI chat files supported. ZIP auto-extracts.',
     stateReady: 'Ready',
     stateDrop: 'Drop here',
     stateDropHint: 'Upload starts right away.',
@@ -106,6 +106,43 @@ export const enCopy = {
     doneDescription: 'Open it in the reader now.',
     donePrimary: 'Open reader',
     doneSecondary: 'New upload',
+    exportGuide: {
+      title: 'How to export your chat',
+      platforms: [
+        {
+          name: 'KakaoTalk',
+          format: 'ZIP or TXT',
+          steps: [
+            'Open a chat room',
+            'Tap the menu (≡) in the top-right → Chat room drawer',
+            'Tap the settings icon (⚙) → Export chat',
+            'Upload the exported ZIP or TXT file',
+          ],
+        },
+        {
+          name: 'Instagram',
+          format: 'JSON recommended',
+          steps: [
+            'Go to Settings → Accounts Center',
+            'Your information and permissions → Download your information',
+            'Select "Download specific information"',
+            'Check Messages only — uncheck everything else',
+            'Format: choose JSON → Request download',
+            'Download the file from the email link and upload it',
+          ],
+        },
+        {
+          name: 'LINE',
+          format: 'TXT',
+          steps: [
+            'Open a chat room',
+            'Tap the menu (≡) in the top-right → Export chat',
+            'Select "Text only"',
+            'Upload the exported TXT file',
+          ],
+        },
+      ],
+    },
     errors: {
       maxSize: (maxMb: number) => `Files must be ${Math.floor(maxMb / 1024)}GB or smaller.`,
       invalidType: 'Only .zip .txt .md .json files are supported.',

@@ -109,6 +109,8 @@ model Export {
 enum UploadType {
   KAKAO
   AI_CONVERSATION
+  INSTAGRAM
+  LINE
 }
 
 enum ParseStatus {

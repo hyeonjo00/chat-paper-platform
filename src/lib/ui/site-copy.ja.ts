@@ -65,7 +65,7 @@ export const jaCopy = {
     heroTitle: 'ChatPaper',
     heroLeadTop: '会話を',
     heroLeadBottom: '論文へ',
-    heroDescription: 'KakaoTalk と AI の会話を学術文書の下書きに整えます。',
+    heroDescription: 'KakaoTalk・Instagram DM・LINE・AI の会話を学術文書の下書きに整えます。',
     primaryCta: '開始',
     secondaryCta: 'アップロード',
     plannedFlow: 'FLOW',
@@ -83,12 +83,12 @@ export const jaCopy = {
     heroTitle: 'アップロードから始まります。',
     heroDescription: '会話ファイルを上げると分析と下書き生成がすぐ始まります。',
     signals: [
-      ['入力', 'KakaoTalk ZIP またはテキスト'],
+      ['入力', 'KakaoTalk · Instagram · LINE · AI'],
       ['出力', '論文下書きとリーダー'],
       ['速度', 'アップロード後すぐ分析'],
     ],
     formTitle: 'アップロード',
-    formDescription: 'クリックまたはドラッグしてください。ZIPは会話 txt だけを抽出してアップロードします。',
+    formDescription: 'KakaoTalk・Instagram DM・LINE・AIチャットのファイルを対応。ZIPは自動で txt を抽出します。',
     stateReady: '準備完了',
     stateDrop: 'ここにドロップ',
     stateDropHint: 'すぐアップロードを開始します。',
@@ -106,6 +106,43 @@ export const jaCopy = {
     doneDescription: 'リーダーでそのまま確認できます。',
     donePrimary: 'リーダーを開く',
     doneSecondary: '新規アップロード',
+    exportGuide: {
+      title: 'チャットのエクスポート方法',
+      platforms: [
+        {
+          name: 'KakaoTalk',
+          format: 'ZIP または TXT',
+          steps: [
+            'チャットルームを開く',
+            '右上のメニュー(≡) → チャットルームの引き出し',
+            '設定アイコン(⚙) → トークをエクスポート',
+            'エクスポートされた ZIP または TXT をアップロード',
+          ],
+        },
+        {
+          name: 'Instagram',
+          format: 'JSON 推奨',
+          steps: [
+            '設定 → アカウントセンター',
+            '個人の情報、投稿、コンテンツ → 情報をダウンロード',
+            '「特定の情報をダウンロード」を選択',
+            'コンテンツ項目でメッセージのみチェック（他はすべて解除）',
+            'フォーマット: JSON を選択 → ダウンロードをリクエスト',
+            'メールのリンクからファイルをダウンロードしてアップロード',
+          ],
+        },
+        {
+          name: 'LINE',
+          format: 'TXT',
+          steps: [
+            'トークルームを開く',
+            '右上のメニュー(≡) → トークをエクスポート',
+            '「テキストのみ」を選択',
+            'エクスポートされた TXT をアップロード',
+          ],
+        },
+      ],
+    },
     errors: {
       maxSize: (maxMb: number) => `ファイルサイズは ${Math.floor(maxMb / 1024)}GB 以下である必要があります。`,
       invalidType: '.zip .txt .md .json のみアップロードできます。',

@@ -23,7 +23,7 @@ import { useSitePreferences } from '@/components/ui/site-preferences-provider'
 
 type Status = 'idle' | 'uploading' | 'analyzing' | 'generating' | 'done' | 'error'
 
-const ACCEPT = '.txt,.md,.json,.zip'
+const ACCEPT = '.txt,.md,.json,.html,.htm,.zip'
 const MAX_MB = 10240
 const VERCEL_SAFE_TEXT_MB = 4
 const VERCEL_SAFE_TEXT_BYTES = VERCEL_SAFE_TEXT_MB * 1024 * 1024
@@ -97,6 +97,7 @@ export default function UploadPage() {
   const [error, setError] = useState('')
   const [paperId, setPaperId] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
 
   const isBusy = status === 'uploading' || status === 'analyzing' || status === 'generating'
   const progress = PROGRESS[status]
@@ -134,7 +135,7 @@ export default function UploadPage() {
     }
 
     const ext = fileExtension(nextFile.name)
-    if (!['txt', 'md', 'json', 'zip'].includes(ext)) {
+    if (!['txt', 'md', 'json', 'html', 'htm', 'zip'].includes(ext)) {
       setError(labels.errors.invalidType)
       return
     }
@@ -268,9 +269,19 @@ export default function UploadPage() {
                 </p>
               </div>
 
-              <Link href="/" className={ghostButtonClass}>
-                {copy.home.nav.home}
-              </Link>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setGuideOpen(true)}
+                  aria-label={labels.exportGuide.title}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-500 dark:hover:border-white/20 dark:hover:text-slate-300"
+                >
+                  <QuestionIcon />
+                </button>
+                <Link href="/" className={ghostButtonClass}>
+                  {copy.home.nav.home}
+                </Link>
+              </div>
             </div>
           </SurfaceCard>
 
@@ -447,6 +458,59 @@ export default function UploadPage() {
           </div>
         </div>
       </PageContainer>
+
+      {guideOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm"
+          onClick={() => setGuideOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-white/[0.06]">
+              <p className="text-sm font-semibold tracking-[-0.02em] text-slate-900 dark:text-slate-100">
+                {labels.exportGuide.title}
+              </p>
+              <button
+                type="button"
+                onClick={() => setGuideOpen(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/[0.06] dark:hover:text-slate-300"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto p-6">
+              <div className="space-y-6">
+                {labels.exportGuide.platforms.map(platform => (
+                  <div key={platform.name}>
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {platform.name}
+                      </span>
+                      <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] font-medium tracking-wide text-slate-500 dark:border-white/10 dark:text-slate-400">
+                        {platform.format}
+                      </span>
+                    </div>
+                    <ol className="space-y-2">
+                      {platform.steps.map((step, i) => (
+                        <li key={i} className="flex gap-3">
+                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-500 dark:bg-white/[0.06] dark:text-slate-400">
+                            {i + 1}
+                          </span>
+                          <span className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            {step}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </AppShell>
   )
 }
@@ -480,6 +544,22 @@ function ArrowUpIcon() {
   return (
     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 19.5V4.5m0 0l-4.5 4.5M12 4.5l4.5 4.5" />
+    </svg>
+  )
+}
+
+function QuestionIcon() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   )
 }

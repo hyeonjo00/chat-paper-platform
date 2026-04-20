@@ -65,7 +65,7 @@ export const koCopy = {
     heroTitle: 'ChatPaper',
     heroLeadTop: '대화를',
     heroLeadBottom: '논문으로',
-    heroDescription: '카카오톡과 AI 대화를 학술 문서 초안으로 정리합니다.',
+    heroDescription: '카카오톡, 인스타그램 DM, LINE, AI 대화를 학술 문서 초안으로 정리합니다.',
     primaryCta: '시작',
     secondaryCta: '업로드',
     plannedFlow: 'FLOW',
@@ -83,12 +83,12 @@ export const koCopy = {
     heroTitle: '업로드로 시작합니다.',
     heroDescription: '대화 파일을 올리면 분석과 초안 생성이 바로 이어집니다.',
     signals: [
-      ['입력', '카카오톡 ZIP 또는 텍스트'],
+      ['입력', '카카오톡·인스타·LINE·AI'],
       ['출력', '논문 초안과 리더'],
       ['속도', '업로드 후 바로 분석'],
     ],
     formTitle: '업로드',
-    formDescription: '클릭하거나 드래그하세요. ZIP은 대화 txt만 추출해 업로드합니다.',
+    formDescription: '카카오톡·인스타 DM·LINE·AI 대화 파일을 올려주세요. ZIP은 txt를 자동 추출합니다.',
     stateReady: '준비 완료',
     stateDrop: '여기에 놓기',
     stateDropHint: '바로 업로드를 시작합니다.',
@@ -106,9 +106,46 @@ export const koCopy = {
     doneDescription: '이제 리더에서 바로 확인할 수 있습니다.',
     donePrimary: '리더 열기',
     doneSecondary: '새 업로드',
+    exportGuide: {
+      title: '파일 내보내기 방법',
+      platforms: [
+        {
+          name: '카카오톡',
+          format: 'ZIP 또는 TXT',
+          steps: [
+            '채팅방을 엽니다',
+            '우측 상단 메뉴(≡) → 채팅방 서랍',
+            '우측 상단 설정(⚙) → 대화 내보내기',
+            '내보내기된 ZIP 또는 TXT 파일을 업로드',
+          ],
+        },
+        {
+          name: '인스타그램',
+          format: 'JSON 권장',
+          steps: [
+            '설정 및 개인정보 → 계정 센터',
+            '개인 정보, 게시물 및 정보 → 정보 다운로드',
+            '특정 정보 다운로드 선택',
+            '콘텐츠 항목 중 메시지만 체크 (나머지는 해제)',
+            '형식: JSON 선택 → 다운로드 요청',
+            '이메일로 받은 링크에서 파일 다운로드 후 업로드',
+          ],
+        },
+        {
+          name: 'LINE',
+          format: 'TXT',
+          steps: [
+            '대화방을 엽니다',
+            '우측 상단 메뉴(≡) → 대화 내보내기',
+            '텍스트만 내보내기 선택',
+            '내보내기된 TXT 파일을 업로드',
+          ],
+        },
+      ],
+    },
     errors: {
       maxSize: (maxMb: number) => `파일 크기는 ${Math.floor(maxMb / 1024)}GB 이하여야 합니다.`,
-      invalidType: '.zip .txt .md .json 파일만 업로드할 수 있습니다.',
+      invalidType: '.zip .txt .md .json .html 파일만 업로드할 수 있습니다.',
       zipMissingText: '이 ZIP 안에는 카카오톡 대화 txt 파일이 없습니다.',
       zipTooLarge: (maxMb: number) =>
         `추출된 대화 txt가 ${maxMb}MB를 넘어 Vercel 업로드 한도를 초과합니다. txt 파일만 직접 올려주세요.`,

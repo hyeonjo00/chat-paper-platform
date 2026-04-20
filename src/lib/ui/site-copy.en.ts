@@ -107,7 +107,7 @@ export const enCopy = {
     donePrimary: 'Open reader',
     doneSecondary: 'New upload',
     exportGuide: {
-      title: 'How to export your chat',
+      title: 'How to export',
       platforms: [
         {
           name: 'KakaoTalk',

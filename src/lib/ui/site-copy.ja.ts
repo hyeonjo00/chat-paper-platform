@@ -107,7 +107,7 @@ export const jaCopy = {
     donePrimary: 'リーダーを開く',
     doneSecondary: '新規アップロード',
     exportGuide: {
-      title: 'チャットのエクスポート方法',
+      title: 'エクスポート方法',
       platforms: [
         {
           name: 'KakaoTalk',

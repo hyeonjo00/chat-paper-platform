@@ -107,7 +107,7 @@ export const koCopy = {
     donePrimary: '리더 열기',
     doneSecondary: '새 업로드',
     exportGuide: {
-      title: '파일 내보내기 방법',
+      title: '내보내기 방법',
       platforms: [
         {
           name: '카카오톡',
@@ -146,7 +146,7 @@ export const koCopy = {
     errors: {
       maxSize: (maxMb: number) => `파일 크기는 ${Math.floor(maxMb / 1024)}GB 이하여야 합니다.`,
       invalidType: '.zip .txt .md .json .html 파일만 업로드할 수 있습니다.',
-      zipMissingText: '이 ZIP 안에는 카카오톡 대화 txt 파일이 없습니다.',
+      zipMissingText: 'ZIP 안에서 대화 파일(.txt .json .html)을 찾을 수 없습니다.',
       zipTooLarge: (maxMb: number) =>
         `추출된 대화 txt가 ${maxMb}MB를 넘어 Vercel 업로드 한도를 초과합니다. txt 파일만 직접 올려주세요.`,
       zipExtractFailed: '이 ZIP에서 대화 txt를 추출하지 못했습니다.',

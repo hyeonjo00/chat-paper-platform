@@ -44,6 +44,10 @@ function fileExtension(name: string) {
   return name.split('.').pop()?.toLowerCase() ?? ''
 }
 
+function isInstagramJson(text: string) {
+  return text.includes('"timestamp_ms"') && text.includes('"sender_name"')
+}
+
 async function prepareUploadFile(
   input: File,
   errors: {
@@ -56,13 +60,60 @@ async function prepareUploadFile(
 
   try {
     const zip = await JSZip.loadAsync(input)
-    const txtEntries = Object.values(zip.files).filter(
-      (entry) => !entry.dir && entry.name.toLowerCase().endsWith('.txt')
-    )
+    const all = Object.values(zip.files).filter(e => !e.dir)
 
-    if (!txtEntries.length) {
-      throw new Error(errors.zipMissingText)
+    const byExt = (ext: string) => all.filter(e => e.name.toLowerCase().endsWith(ext))
+
+    // Instagram ZIP: merge all message_N.json files into one JSON
+    const jsonEntries = byExt('.json')
+    if (jsonEntries.length > 0) {
+      const texts = await Promise.all(jsonEntries.map(e => e.async('string')))
+      const igJsons = texts.filter(isInstagramJson)
+      if (igJsons.length > 0) {
+        // Merge messages arrays from all parts
+        const merged = igJsons.reduce<{ participants: unknown[]; messages: unknown[] }>(
+          (acc, t) => {
+            const parsed = JSON.parse(t)
+            if (!acc.participants.length && parsed.participants) acc.participants = parsed.participants
+            if (Array.isArray(parsed.messages)) acc.messages.push(...parsed.messages)
+            return acc
+          },
+          { participants: [], messages: [] }
+        )
+        const mergedText = JSON.stringify(merged)
+        const prepared = new File([mergedText], 'instagram_messages.json', { type: 'application/json' })
+        if (prepared.size > VERCEL_SAFE_TEXT_BYTES) throw new Error(errors.zipTooLarge(VERCEL_SAFE_TEXT_MB))
+        return prepared
+      }
+      // Non-Instagram JSON (e.g. ChatGPT export)
+      const texts2 = await Promise.all(jsonEntries.map(async e => ({
+        name: e.name.split('/').pop() ?? e.name,
+        text: await e.async('string'),
+      })))
+      const selected = texts2.sort((a, b) => b.text.length - a.text.length)[0]
+      const prepared = new File([selected.text], selected.name, { type: 'application/json' })
+      if (prepared.size > VERCEL_SAFE_TEXT_BYTES) throw new Error(errors.zipTooLarge(VERCEL_SAFE_TEXT_MB))
+      return prepared
     }
+
+    // HTML (Instagram HTML export)
+    const htmlEntries = byExt('.html').concat(byExt('.htm'))
+    if (htmlEntries.length > 0) {
+      const candidates = await Promise.all(
+        htmlEntries.map(async e => ({
+          name: e.name.split('/').pop() ?? e.name,
+          text: await e.async('string'),
+        }))
+      )
+      const selected = candidates.sort((a, b) => b.text.length - a.text.length)[0]
+      const prepared = new File([selected.text], selected.name, { type: 'text/html' })
+      if (prepared.size > VERCEL_SAFE_TEXT_BYTES) throw new Error(errors.zipTooLarge(VERCEL_SAFE_TEXT_MB))
+      return prepared
+    }
+
+    // TXT (KakaoTalk / LINE)
+    const txtEntries = byExt('.txt')
+    if (!txtEntries.length) throw new Error(errors.zipMissingText)
 
     const candidates = await Promise.all(
       txtEntries.map(async (entry) => ({
@@ -70,16 +121,9 @@ async function prepareUploadFile(
         text: (await entry.async('string')).replace(/^\uFEFF/, ''),
       }))
     )
-
     const selected = candidates.sort((a, b) => b.text.length - a.text.length)[0]
-    const prepared = new File([selected.text], selected.name, {
-      type: 'text/plain;charset=utf-8',
-    })
-
-    if (prepared.size > VERCEL_SAFE_TEXT_BYTES) {
-      throw new Error(errors.zipTooLarge(VERCEL_SAFE_TEXT_MB))
-    }
-
+    const prepared = new File([selected.text], selected.name, { type: 'text/plain;charset=utf-8' })
+    if (prepared.size > VERCEL_SAFE_TEXT_BYTES) throw new Error(errors.zipTooLarge(VERCEL_SAFE_TEXT_MB))
     return prepared
   } catch (error) {
     if (error instanceof Error) throw error
@@ -269,19 +313,9 @@ export default function UploadPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setGuideOpen(true)}
-                  aria-label={labels.exportGuide.title}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-500 dark:hover:border-white/20 dark:hover:text-slate-300"
-                >
-                  <QuestionIcon />
-                </button>
-                <Link href="/" className={ghostButtonClass}>
-                  {copy.home.nav.home}
-                </Link>
-              </div>
+              <Link href="/" className={ghostButtonClass}>
+                {copy.home.nav.home}
+              </Link>
             </div>
           </SurfaceCard>
 
@@ -321,9 +355,19 @@ export default function UploadPage() {
 
               <form onSubmit={submit} className="space-y-5 p-6 sm:p-7">
                 <div>
-                  <p className="text-lg font-semibold tracking-[-0.03em] text-slate-950 dark:text-slate-100">
-                    {labels.formTitle}
-                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-lg font-semibold tracking-[-0.03em] text-slate-950 dark:text-slate-100">
+                      {labels.formTitle}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setGuideOpen(true)}
+                      className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold tracking-wide text-slate-500 transition-colors hover:border-slate-300 hover:bg-white hover:text-slate-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400 dark:hover:border-white/20 dark:hover:text-slate-200"
+                    >
+                      <QuestionIcon />
+                      {labels.exportGuide.title}
+                    </button>
+                  </div>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     {labels.formDescription}
                   </p>

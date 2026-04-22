@@ -27,6 +27,10 @@ function hashPart(value: string) {
   return createHash('sha256').update(value).digest('hex').slice(0, 32)
 }
 
+function isRedisConfigured(): boolean {
+  return !!process.env.REDIS_URL?.trim()
+}
+
 async function incrementLimit(key: string, max: number) {
   const redis = getApiRedisConnection()
   const result = await redis.eval(
@@ -43,6 +47,7 @@ async function incrementLimit(key: string, max: number) {
 export async function checkIpPreflightRateLimit(
   req: NextRequest,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!isRedisConfigured()) return { ok: true }
   try {
     const ip = getClientIp(req)
     const redis = getApiRedisConnection()
@@ -59,8 +64,8 @@ export async function checkIpPreflightRateLimit(
     }
     return { ok: true }
   } catch (e) {
-    console.error('[rate-limit] preflight Redis error (fail-closed):', e instanceof Error ? e.message : e)
-    return { ok: false, message: '서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해 주세요.' }
+    console.error('[rate-limit] preflight Redis error (fail-open):', e instanceof Error ? e.message : e)
+    return { ok: true }
   }
 }
 
@@ -69,6 +74,7 @@ export async function checkRouteRateLimit(
   ip: string,
   guestKey: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!isRedisConfigured()) return { ok: true }
   try {
     const limits = ROUTE_LIMITS[route]
     const [ipOk, guestOk] = await Promise.all([
@@ -81,8 +87,8 @@ export async function checkRouteRateLimit(
     }
     return { ok: true }
   } catch (e) {
-    console.error('[rate-limit] Redis error (fail-closed):', e instanceof Error ? e.message : e)
-    return { ok: false, message: '서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해 주세요.' }
+    console.error('[rate-limit] Redis error (fail-open):', e instanceof Error ? e.message : e)
+    return { ok: true }
   }
 }
 

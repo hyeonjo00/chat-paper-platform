@@ -1,9 +1,31 @@
 import IORedis from 'ioredis'
 
 // Separate configs for API (non-blocking) vs Worker (persistent)
-function makeConnection(enableOfflineQueue: boolean): IORedis {
-  const url = process.env.REDIS_URL
+function getRedisUrl(): string {
+  const url = process.env.REDIS_URL?.trim()
   if (!url) throw new Error('REDIS_URL is not set')
+
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'redis:' && parsed.protocol !== 'rediss:') {
+      throw new Error('invalid protocol')
+    }
+  } catch {
+    throw new Error('REDIS_URL must start with redis:// or rediss://')
+  }
+
+  return url
+}
+
+function sanitizeRedisErrorMessage(message: string): string {
+  const configuredUrl = process.env.REDIS_URL?.trim()
+  let sanitized = configuredUrl ? message.replaceAll(configuredUrl, '[REDACTED_REDIS_URL]') : message
+  sanitized = sanitized.replaceAll(/\/\/([^:@\s]+):([^@\s]+)@/g, '//[redacted]:[redacted]@')
+  return sanitized
+}
+
+function makeConnection(enableOfflineQueue: boolean): IORedis {
+  const url = getRedisUrl()
 
   const conn = new IORedis(url, {
     maxRetriesPerRequest: null, // required by BullMQ
@@ -18,7 +40,7 @@ function makeConnection(enableOfflineQueue: boolean): IORedis {
   })
 
   conn.on('error', (err) => {
-    console.error('[redis] connection error', err.message)
+    console.error('[redis] connection error', sanitizeRedisErrorMessage(err.message))
   })
 
   return conn

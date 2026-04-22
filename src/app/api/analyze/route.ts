@@ -23,8 +23,9 @@ export async function POST(req: NextRequest) {
     const preflight = await checkIpPreflightRateLimit(req)
     if (!preflight.ok) return err('RATE_LIMITED', preflight.message, 429)
 
-    const cookieGuestKey = req.cookies.get('chatpaper_guest')?.value ?? ''
-    const rate = await checkRouteRateLimit('analyze', getClientIp(req), cookieGuestKey)
+    const clientIp = getClientIp(req)
+    const cookieGuestKey = req.cookies.get('chatpaper_guest')?.value ?? `anonymous:${clientIp}`
+    const rate = await checkRouteRateLimit('analyze', clientIp, cookieGuestKey)
     if (!rate.ok) return err('RATE_LIMITED', rate.message, 429)
 
     const guest = await getOrCreateGuestUser()

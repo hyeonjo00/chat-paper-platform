@@ -1,6 +1,6 @@
 # Chat Paper
 
-[English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md)
+[English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [Technical Whitepaper (EN)](docs/chat-paper-ai-technical-whitepaper-en.md) | [技術白書 (KO)](docs/chat-paper-ai-technical-whitepaper-ko.md)
 
 **KakaoTalk・Instagram DM・LINE・AI会話ログを、アカウント不要で学術論文に変換する非同期AIパイプライン**
 

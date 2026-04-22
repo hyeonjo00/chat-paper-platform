@@ -1,6 +1,6 @@
 # Chat Paper
 
-[English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md)
+[English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [기술 백서 (KO)](docs/chat-paper-ai-technical-whitepaper-ko.md) | [Technical Whitepaper (EN)](docs/chat-paper-ai-technical-whitepaper-en.md)
 
 **카카오톡, Instagram DM, LINE, AI 대화 로그를 계정 없이 학술 논문으로 변환하는 비동기 AI 파이프라인**
 

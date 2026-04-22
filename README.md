@@ -1,6 +1,6 @@
 # Chat Paper
 
-[English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md)
+[English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [Technical Whitepaper (EN)](docs/chat-paper-ai-technical-whitepaper-en.md) | [기술 백서 (KO)](docs/chat-paper-ai-technical-whitepaper-ko.md)
 
 **An async AI pipeline that transforms KakaoTalk, Instagram DM, LINE, and AI conversation logs into peer-reviewed-style academic papers — without an account.**
 

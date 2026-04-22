@@ -10,8 +10,16 @@ function getRedisUrl(): string {
     if (parsed.protocol !== 'redis:' && parsed.protocol !== 'rediss:') {
       throw new Error('invalid protocol')
     }
+    if (
+      process.env.NODE_ENV === 'production' &&
+      parsed.protocol === 'redis:' &&
+      parsed.hostname.endsWith('.upstash.io') &&
+      !parsed.hostname.startsWith('fly-')
+    ) {
+      throw new Error('public Upstash Redis URLs require TLS')
+    }
   } catch {
-    throw new Error('REDIS_URL must start with redis:// or rediss://')
+    throw new Error('REDIS_URL must be a valid redis:// URL, or rediss:// for public Upstash endpoints')
   }
 
   return url
@@ -26,12 +34,14 @@ function sanitizeRedisErrorMessage(message: string): string {
 
 function makeConnection(enableOfflineQueue: boolean): IORedis {
   const url = getRedisUrl()
+  const parsed = new URL(url)
 
   const conn = new IORedis(url, {
     maxRetriesPerRequest: null, // required by BullMQ
     enableReadyCheck: false,
     enableOfflineQueue,
     connectTimeout: 5_000,
+    ...(parsed.protocol === 'rediss:' ? { tls: { servername: parsed.hostname } } : {}),
     retryStrategy: (times: number) => {
       if (times > 5) return null // stop retrying after 5 attempts
       return Math.min(times * 500, 3_000)

@@ -7,23 +7,47 @@ const GUEST_DOMAIN = 'guest.chatpaper.local'
 const GUEST_NAME = 'Guest'
 const GUEST_MAX_AGE = 60 * 60 * 24 * 30
 
-export async function getGuestUser() {
-  const cookieStore = cookies()
-  const existingGuestKey = cookieStore.get(GUEST_COOKIE)?.value
-  const guestKey = existingGuestKey || crypto.randomUUID()
-  const email = `${guestKey}@${GUEST_DOMAIN}`
+function guestEmail(key: string) {
+  return `${key}@${GUEST_DOMAIN}`
+}
+
+function readGuestKey(): string | undefined {
+  return cookies().get(GUEST_COOKIE)?.value
+}
+
+// Use in POST routes — creates user if missing
+export async function getOrCreateGuestUser() {
+  const existingKey = readGuestKey()
+  const guestKey = existingKey ?? crypto.randomUUID()
+  const email = guestEmail(guestKey)
 
   const user = await prisma.user.upsert({
     where: { email },
-    update: { name: GUEST_NAME },
+    update: {},
     create: { email, name: GUEST_NAME },
     select: { id: true },
   })
 
-  return {
-    userId: user.id,
-    guestKey,
-  }
+  return { userId: user.id, guestKey }
+}
+
+// Use in GET routes — never creates users; returns null if no session
+export async function getExistingGuestUser(): Promise<{ userId: string; guestKey: string } | null> {
+  const guestKey = readGuestKey()
+  if (!guestKey) return null
+
+  const user = await prisma.user.findUnique({
+    where: { email: guestEmail(guestKey) },
+    select: { id: true },
+  })
+  if (!user) return null
+
+  return { userId: user.id, guestKey }
+}
+
+// Back-compat alias — existing POST routes that haven't been migrated yet
+export async function getGuestUser() {
+  return getOrCreateGuestUser()
 }
 
 export function setGuestCookie(response: NextResponse, guestKey: string) {

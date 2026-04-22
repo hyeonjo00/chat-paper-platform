@@ -20,7 +20,7 @@ export type PaperSection =
 export async function detectLanguageWithLLM(
   samples: string[]
 ): Promise<{ ko: number; en: number; ja: number }> {
-  const content = await callWithRetry(() =>
+  const content = await callWithRetry((signal) =>
     openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0,
@@ -35,7 +35,7 @@ export async function detectLanguageWithLLM(
           content: samples.slice(0, 80).join('\n'),
         },
       ],
-    })
+    }, { signal })
   )
 
   try {
@@ -74,7 +74,7 @@ export async function summariseChunk(
     ? `이 대화는 ${speakerIds.length}명이 참여하는 단체 채팅방입니다. 각 화자의 역할, 발화 비중, 상호작용 패턴을 개별적으로 분석하라.`
     : `이 대화는 1:1 대화입니다. 두 화자 간의 관계 역학을 분석하라.`
 
-  const content = await callWithRetry(() =>
+  const content = await callWithRetry((signal) =>
     openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.2,
@@ -98,7 +98,7 @@ Return JSON:
         },
         { role: 'user', content: dialogue },
       ],
-    })
+    }, { signal })
   )
 
   try {
@@ -127,7 +127,7 @@ export async function analyseRelationship(
   const sample = messages.slice(0, 200).map(m => `${m.speakerId}: ${m.text}`).join('\n')
   const speakerIds = Array.from(new Set(messages.map(m => m.speakerId)))
 
-  const content = await callWithRetry(() =>
+  const content = await callWithRetry((signal) =>
     openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.3,
@@ -153,7 +153,7 @@ Return JSON:
         },
         { role: 'user', content: `화자 목록: ${speakerIds.join(', ')}\n\n대화:\n${sample}` },
       ],
-    })
+    }, { signal })
   )
 
   try {
@@ -211,7 +211,7 @@ export async function generatePaperSection(opts: GenerateSectionOptions): Promis
     ? `\n\nExisting draft to improve:\n${existingSection}`
     : ''
 
-  const content = await callWithRetry(() =>
+  const content = await callWithRetry((signal) =>
     openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.4,
@@ -230,7 +230,7 @@ Preserve any quoted dialogue blocks exactly as provided. Use [Author, Year] for 
           content: `Analysis data:\n${analysisContext}`,
         },
       ],
-    })
+    }, { signal })
   )
 
   return content.choices[0].message.content?.trim() ?? ''

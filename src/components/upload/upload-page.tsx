@@ -187,18 +187,18 @@ export default function UploadPage() {
     setFile(nextFile)
   }
 
-  async function pollPaperStatus(id: string): Promise<void> {
+  async function pollJobStatus(jobId: string): Promise<string> {
     const deadline = Date.now() + POLL_TIMEOUT_MS
     while (Date.now() < deadline) {
       await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
-      const res = await fetch(`/api/papers/${id}`)
+      const res = await fetch(`/api/jobs/${jobId}`)
       if (!res.ok) throw new Error(labels.errors.analyzeFailed)
       const json = await res.json()
       if (!json.ok) throw new Error(json.error?.message ?? labels.errors.analyzeFailed)
-      const paperStatus: string = json.data.status
-      if (paperStatus === 'COMPLETED') return
-      if (paperStatus === 'FAILED') throw new Error(labels.errors.analyzeFailed)
-      // still PROCESSING — keep polling
+      const { status, paperId } = json.data
+      if (status === 'COMPLETED' && paperId) return paperId as string
+      if (status === 'FAILED') throw new Error(labels.errors.analyzeFailed)
+      // PENDING or PROCESSING — keep polling
     }
     throw new Error(labels.errors.analyzeFailed)
   }
@@ -226,7 +226,7 @@ export default function UploadPage() {
         throw new Error(uploadJson.error?.message ?? labels.errors.uploadFailed)
       }
 
-      // Step 2: analyze (language detection + create PROCESSING paper)
+      // Step 2: analyze — enqueues worker job, returns jobId immediately
       setStatus('analyzing')
       const analyzeResponse = await fetch('/api/analyze', {
         method: 'POST',
@@ -239,18 +239,20 @@ export default function UploadPage() {
         throw new Error(analyzeJson.error?.message ?? labels.errors.analyzeFailed)
       }
 
-      const newPaperId: string = analyzeJson.data.paperId
+      const { jobId, reused, paperId: existingPaperId, status: existingStatus } = analyzeJson.data
 
-      // Step 3: trigger background generation
+      // Only skip polling when the reused job is already finished
+      if (reused && existingStatus === 'COMPLETED' && existingPaperId) {
+        setPaperId(existingPaperId as string)
+        setStatus('done')
+        return
+      }
+
+      // Step 3: poll job until worker completes (always, even for reused jobs in progress)
       setStatus('generating')
-      fetch(`/api/papers/${newPaperId}/generate`, { method: 'POST' }).catch(() => {
-        // generation errors will surface via polling
-      })
+      const completedPaperId = await pollJobStatus(jobId as string)
 
-      // Step 4: poll until COMPLETED or FAILED
-      await pollPaperStatus(newPaperId)
-
-      setPaperId(newPaperId)
+      setPaperId(completedPaperId)
       setStatus('done')
     } catch (submissionError) {
       setError(

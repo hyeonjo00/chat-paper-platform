@@ -9,7 +9,8 @@ import { parseLINE } from '@/lib/parsers/line'
 import { anonymizeMessages } from '@/lib/privacy/anonymizer'
 import JSZip from 'jszip'
 
-const MAX_BYTES = 10 * 1024 * 1024 * 1024 // 10 GB
+const MAX_BYTES = 50 * 1024 * 1024          // 50 MB
+const MAX_ZIP_EXTRACT_BYTES = 100 * 1024 * 1024 // 100 MB uncompressed
 const ALLOWED_EXT = new Set(['.txt', '.md', '.json', '.html', '.zip'])
 
 function ext(name: string) {
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     const uploadType = (formData.get('type') as string | null)?.toUpperCase()
 
     if (!file) return ERRORS.VALIDATION('file is required')
-    if (file.size > MAX_BYTES) return ERRORS.VALIDATION('파일 크기는 10GB 이하여야 합니다')
+    if (file.size > MAX_BYTES) return ERRORS.VALIDATION('파일 크기는 50MB 이하여야 합니다')
     if (!ALLOWED_EXT.has(ext(file.name))) return ERRORS.VALIDATION('.txt .md .json .html .zip 파일만 지원합니다')
 
     // ZIP 파일이면 내부 .txt 추출 (카카오톡 내보내기 구조)
@@ -56,6 +57,10 @@ export async function POST(req: NextRequest) {
       if (chatFiles.length === 0) return ERRORS.VALIDATION('ZIP 내부에 대화 파일(.txt .json .html)이 없습니다.')
       // 가장 큰 파일 선택 (카카오톡·인스타 내보내기 모두 대응)
       const target = chatFiles.reduce((a, b) => ((a as any)._data?.uncompressedSize ?? 0) >= ((b as any)._data?.uncompressedSize ?? 0) ? a : b)
+      const uncompressedSize: number = (target as any)._data?.uncompressedSize ?? 0
+      if (uncompressedSize > MAX_ZIP_EXTRACT_BYTES) {
+        return ERRORS.VALIDATION('압축 해제 후 파일 크기가 100MB를 초과합니다')
+      }
       raw = await target.async('string')
       rawFilename = target.name.split('/').pop() ?? target.name
     } else {

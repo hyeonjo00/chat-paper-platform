@@ -116,7 +116,7 @@ Chat Paper AI addresses this gap by transforming informal conversations into str
 
 The system is organized into **five vertical layers**, each with a clearly bounded responsibility.
 
-![System Layered Overview](./docs/diagrams/system-layered-overview.png)
+![System Layered Overview](./diagrams/system-layered-overview.png)
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -611,7 +611,7 @@ The `handleSignal()` wrapper catches any rejection from the `shutdown()` promise
 
 ### 9.1 Multi-Tier Rate Limiting
 
-![Rate Limiting Tiers](./docs/diagrams/rate-limiting-tiers.png)
+![Rate Limiting Tiers](./diagrams/rate-limiting-tiers.png)
 
 ```
 ┌────────────────────────────────────────────────────────────┐
@@ -1083,7 +1083,7 @@ JOB_TIMEOUT_MS=         # Hard job timeout in milliseconds
 
 ### 15.1 System Architecture
 
-![System Architecture](./docs/diagrams/system-architecture.png)
+![System Architecture](./diagrams/system-architecture.png)
 
 ```
 [Browser / Mobile Client]
@@ -1115,7 +1115,7 @@ JOB_TIMEOUT_MS=         # Hard job timeout in milliseconds
 
 ### 15.2 Queue Processing Flow
 
-![Queue Processing Flow](./docs/diagrams/queue-processing-flow.png)
+![Queue Processing Flow](./diagrams/queue-processing-flow.png)
 
 ```
 [POST /api/analyze]
@@ -1153,7 +1153,7 @@ JOB_TIMEOUT_MS=         # Hard job timeout in milliseconds
 
 ### 15.3 Worker Execution Flow
 
-![Worker Execution Flow](./docs/diagrams/worker-execution-flow.png)
+![Worker Execution Flow](./diagrams/worker-execution-flow.png)
 
 ```
 [BullMQ dispatches job]
@@ -1206,7 +1206,7 @@ JOB_TIMEOUT_MS=         # Hard job timeout in milliseconds
 
 ### 15.4 Retry and Backoff Loop
 
-![Retry and Backoff Loop](./docs/diagrams/retry-backoff-loop.png)
+![Retry and Backoff Loop](./diagrams/retry-backoff-loop.png)
 
 ```
 [callWithRetry(fn, maxRetries = 5)]
@@ -1248,7 +1248,7 @@ JOB_TIMEOUT_MS=         # Hard job timeout in milliseconds
 
 ### 15.5 Job Recovery Flow
 
-![Job Recovery Flow](./docs/diagrams/job-recovery-flow.png)
+![Job Recovery Flow](./diagrams/job-recovery-flow.png)
 
 ```
 [Recovery Timer — every 5 minutes]

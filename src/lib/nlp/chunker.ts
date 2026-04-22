@@ -1,4 +1,4 @@
-import { NormalizedMessage } from '@/types/conversation'
+import type { NormalizedMessage } from '@/types/conversation'
 
 export interface Chunk {
   index: number

@@ -2,7 +2,6 @@ import { NextRequest } from 'next/server'
 import { ok, ERRORS } from '@/lib/api/response'
 import { getExistingGuestUser } from '@/lib/auth/guest-user'
 import { getJobStatus } from '../../../../../server/services/jobService'
-import { prisma } from '@/lib/db/prisma'
 
 export async function GET(
   _req: NextRequest,
@@ -14,12 +13,7 @@ export async function GET(
 
     const job = await getJobStatus(params.jobId)
     if (!job) return ERRORS.NOT_FOUND('Job not found')
-
-    const dbJob = await prisma.job.findUnique({
-      where: { id: params.jobId },
-      select: { userId: true },
-    })
-    if (dbJob?.userId !== guest.userId) return ERRORS.FORBIDDEN()
+    if (job.userId !== guest.userId) return ERRORS.FORBIDDEN()
 
     return ok({
       jobId: job.id,

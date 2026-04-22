@@ -1,20 +1,17 @@
-# Deploy the worker as a persistent Fly.io Machine.
-# `fly deploy` picks this up automatically.
 app = "chat-paper-worker"
-primary_region = "nrt"  # Tokyo — closest to Korean users
+primary_region = "nrt"
 
 [build]
-  [build.args]
-    NODE_ENV = "production"
-
-[[services]]
-  # No HTTP port — this is a pure background worker
-  processes = ["worker"]
+  dockerfile = "Dockerfile.worker"
 
 [processes]
-  worker = "npm run worker"
+  worker = "node dist/server/worker/index.js"
 
 [env]
   NODE_ENV = "production"
   LOG_LEVEL = "info"
   WORKER_CONCURRENCY = "2"
+  JOB_TIMEOUT_MS = "600000"
+
+[[vm]]
+  memory = "512mb"

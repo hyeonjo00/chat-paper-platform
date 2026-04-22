@@ -27,14 +27,25 @@ export async function findJobByIdempotencyKey(key: string) {
 }
 
 export async function markJobProcessing(jobId: string) {
-  return prisma.job.update({
-    where: { id: jobId },
+  const result = await prisma.job.updateMany({
+    where: { id: jobId, status: JobStatus.PENDING },
     data: {
       status: JobStatus.PROCESSING,
       startedAt: new Date(),
       attempts: { increment: 1 },
     },
   })
+
+  if (result.count !== 1) {
+    const current = await prisma.job.findUnique({
+      where: { id: jobId },
+      select: { status: true },
+    })
+    logger.warn({ jobId, status: current?.status ?? 'missing' }, 'Skipping non-pending job')
+    return null
+  }
+
+  return prisma.job.findUniqueOrThrow({ where: { id: jobId } })
 }
 
 export async function updateJobProgress(jobId: string, progress: number) {
@@ -45,8 +56,8 @@ export async function updateJobProgress(jobId: string, progress: number) {
 }
 
 export async function markJobCompleted(jobId: string, paperId: string) {
-  return prisma.job.update({
-    where: { id: jobId },
+  const result = await prisma.job.updateMany({
+    where: { id: jobId, status: JobStatus.PROCESSING },
     data: {
       status: JobStatus.COMPLETED,
       progress: 100,
@@ -54,6 +65,11 @@ export async function markJobCompleted(jobId: string, paperId: string) {
       completedAt: new Date(),
     },
   })
+  if (result.count !== 1) {
+    logger.warn({ jobId }, 'Skipping completion for non-processing job')
+    return null
+  }
+  return prisma.job.findUniqueOrThrow({ where: { id: jobId } })
 }
 
 export async function markJobFailed(
@@ -61,35 +77,51 @@ export async function markJobFailed(
   error: Error,
   isFinal: boolean,
 ) {
-  const jobData: Prisma.JobUpdateInput = {
+  const jobData: Prisma.JobUpdateManyMutationInput = {
     errorMessage: error.message,
     errorStack: error.stack,
   }
   if (isFinal) {
     jobData.status = JobStatus.FAILED
     jobData.failedAt = new Date()
+    jobData.startedAt = null
+  } else {
+    jobData.status = JobStatus.PENDING
+    jobData.startedAt = null
   }
 
   // When permanently failed, atomically fail both Job and its Paper so neither
   // stays stuck in PROCESSING indefinitely.
   if (isFinal) {
-    const [job] = await prisma.$transaction(async (tx) => {
-      const updated = await tx.job.update({ where: { id: jobId }, data: jobData })
+    const job = await prisma.$transaction(async (tx) => {
+      const update = await tx.job.updateMany({
+        where: { id: jobId, status: { in: [JobStatus.PENDING, JobStatus.PROCESSING] } },
+        data: jobData,
+      })
+      const updated = await tx.job.findUnique({ where: { id: jobId } })
+      if (update.count !== 1 || !updated) return updated
       if (updated.paperId) {
-        await tx.paper.update({
-          where: { id: updated.paperId },
+        await tx.paper.updateMany({
+          where: { id: updated.paperId, status: 'PROCESSING' },
           data: { status: 'FAILED' },
         })
       }
-      return [updated]
-    })
+      return updated
+    }, { maxWait: 5_000, timeout: 30_000 })
     await appendJobLog(jobId, 'error', `Job permanently failed: ${error.message}`, {
       stack: error.stack,
     })
     return job
   }
 
-  const job = await prisma.job.update({ where: { id: jobId }, data: jobData })
+  const update = await prisma.job.updateMany({
+    where: { id: jobId, status: JobStatus.PROCESSING },
+    data: jobData,
+  })
+  const job = await prisma.job.findUnique({ where: { id: jobId } })
+  if (update.count !== 1) {
+    logger.warn({ jobId, status: job?.status ?? 'missing' }, 'Skipping retry state update for non-processing job')
+  }
   await appendJobLog(jobId, 'error', `Job attempt failed (will retry): ${error.message}`, {
     stack: error.stack,
   })
@@ -113,6 +145,7 @@ export async function getJobStatus(jobId: string) {
     where: { id: jobId },
     select: {
       id: true,
+      userId: true,
       status: true,
       progress: true,
       paperId: true,

@@ -19,6 +19,7 @@ model User {
 
   uploads Upload[]
   papers  Paper[]
+  jobs    Job[]
 
   @@map("users")
 }
@@ -34,23 +35,24 @@ model Upload {
   parseStatus      ParseStatus @default(PENDING)
   parsedAt         DateTime?
 
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parsedMessages  ParsedMessage[]
-  papers          Paper[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parsedMessages ParsedMessage[]
+  papers         Paper[]
+  jobs           Job[]
 
   @@index([userId])
   @@map("uploads")
 }
 
 model ParsedMessage {
-  id          String   @id @default(cuid())
-  uploadId    String
-  speakerId   String
-  timestamp   DateTime
-  text        String   @db.Text
-  lang        String?
-  tokenCount  Int?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  uploadId   String
+  speakerId  String
+  timestamp  DateTime
+  text       String   @db.Text
+  lang       String?
+  tokenCount Int?
+  createdAt  DateTime @default(now())
 
   upload Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
 
@@ -60,32 +62,33 @@ model ParsedMessage {
 }
 
 model Paper {
-  id           String       @id @default(cuid())
-  userId       String
-  uploadId     String
-  language     Language
-  writingStyle WritingStyle
-  status       PaperStatus  @default(PROCESSING)
-  title        String?
-  abstract     String?      @db.Text
-  introduction String?      @db.Text
-  relatedWork  String?      @db.Text
-  methods      String?      @db.Text
-  results      String?      @db.Text
-  discussion   String?      @db.Text
-  conclusion   String?      @db.Text
-  references        Json?
-  appendix          String?      @db.Text
-  relationshipType  String?
-  relationshipIssues String?     @db.Text
-  affectionScores   Json?
-  generatedAt       DateTime?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id                 String       @id @default(cuid())
+  userId             String
+  uploadId           String
+  language           Language
+  writingStyle       WritingStyle
+  status             PaperStatus  @default(PROCESSING)
+  title              String?
+  abstract           String?      @db.Text
+  introduction       String?      @db.Text
+  relatedWork        String?      @db.Text
+  methods            String?      @db.Text
+  results            String?      @db.Text
+  discussion         String?      @db.Text
+  conclusion         String?      @db.Text
+  references         Json?
+  appendix           String?      @db.Text
+  relationshipType   String?
+  relationshipIssues String?      @db.Text
+  affectionScores    Json?
+  generatedAt        DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   upload  Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
   exports Export[]
+  jobs    Job[]
 
   @@index([userId])
   @@index([uploadId])
@@ -93,12 +96,12 @@ model Paper {
 }
 
 model Export {
-  id         String       @id @default(cuid())
-  paperId    String
-  format     ExportFormat
+  id          String       @id @default(cuid())
+  paperId     String
+  format      ExportFormat
   storagePath String
-  sizeBytes  Int?
-  createdAt  DateTime     @default(now())
+  sizeBytes   Int?
+  createdAt   DateTime     @default(now())
 
   paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
 
@@ -130,6 +133,61 @@ enum PaperStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+// ─── Async Job Pipeline ───────────────────────────────────────────────────────
+
+model Job {
+  id             String    @id @default(cuid())
+  userId         String
+  uploadId       String?
+  paperId        String?
+  status         JobStatus @default(PENDING)
+  progress       Int       @default(0)
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(3)
+  errorMessage   String?   @db.Text
+  errorStack     String?   @db.Text
+  idempotencyKey String?   @unique
+  enqueuedAt     DateTime  @default(now())
+  startedAt      DateTime?
+  completedAt    DateTime?
+  failedAt       DateTime?
+  metadata       Json?
+
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  upload Upload?  @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+  paper  Paper?   @relation(fields: [paperId], references: [id], onDelete: SetNull)
+  logs   JobLog[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([uploadId])
+  @@index([idempotencyKey])
+  @@map("jobs")
+}
+
+model JobLog {
+  id        String   @id @default(cuid())
+  jobId     String
+  level     String
+  message   String   @db.Text
+  data      Json?
+  createdAt DateTime @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([jobId, createdAt])
+  @@map("job_logs")
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
 }
 
 enum WritingStyle {

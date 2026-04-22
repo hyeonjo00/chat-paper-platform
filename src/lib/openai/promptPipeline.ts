@@ -1,5 +1,4 @@
 import { openai, callWithRetry } from './client'
-import { DetectionResult } from '@/lib/nlp/languageDetector'
 
 export type PaperLang = 'ko' | 'en' | 'ja'
 export type WritingStyle =
@@ -63,7 +62,8 @@ export interface ChunkSummary {
 export async function summariseChunk(
   messages: { speakerId: string; text: string }[],
   contextHeader: string,
-  lang: PaperLang
+  lang: PaperLang,
+  parentSignal?: AbortSignal,
 ): Promise<ChunkSummary> {
   const langNote = lang === 'ko' ? '한국어로 답하라.' : lang === 'ja' ? '日本語で答えてください。' : 'Answer in English.'
   const dialogue = messages.map(m => `${m.speakerId}: ${m.text}`).join('\n')
@@ -99,7 +99,7 @@ Return JSON:
         { role: 'user', content: dialogue },
       ],
     }, { signal })
-  )
+  , 5, parentSignal)
 
   try {
     return JSON.parse(content.choices[0].message.content ?? '{}') as ChunkSummary
@@ -121,7 +121,8 @@ export interface RelationshipAnalysis {
 
 export async function analyseRelationship(
   messages: { speakerId: string; text: string }[],
-  lang: PaperLang
+  lang: PaperLang,
+  parentSignal?: AbortSignal,
 ): Promise<RelationshipAnalysis> {
   const langNote = lang === 'ko' ? '한국어로 답하라.' : lang === 'ja' ? '日本語で答えてください。' : 'Answer in English.'
   const sample = messages.slice(0, 200).map(m => `${m.speakerId}: ${m.text}`).join('\n')
@@ -154,7 +155,7 @@ Return JSON:
         { role: 'user', content: `화자 목록: ${speakerIds.join(', ')}\n\n대화:\n${sample}` },
       ],
     }, { signal })
-  )
+  , 5, parentSignal)
 
   try {
     return JSON.parse(content.choices[0].message.content ?? '{}') as RelationshipAnalysis
@@ -195,7 +196,7 @@ export interface GenerateSectionOptions {
   existingSection?: string  // pass for iterative refinement
 }
 
-export async function generatePaperSection(opts: GenerateSectionOptions): Promise<string> {
+export async function generatePaperSection(opts: GenerateSectionOptions, parentSignal?: AbortSignal): Promise<string> {
   const { section, analysisContext, lang, style, speakerCount = 2, existingSection } = opts
 
   const langInstr =
@@ -231,7 +232,7 @@ Preserve any quoted dialogue blocks exactly as provided. Use [Author, Year] for 
         },
       ],
     }, { signal })
-  )
+  , 5, parentSignal)
 
   return content.choices[0].message.content?.trim() ?? ''
 }

@@ -7,7 +7,7 @@ import type {
   KeyboardEvent,
 } from 'react'
 import { useRef, useState } from 'react'
-import JSZip from 'jszip'
+import { upload } from '@vercel/blob/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -25,8 +25,6 @@ type Status = 'idle' | 'uploading' | 'analyzing' | 'generating' | 'done' | 'erro
 
 const ACCEPT = '.txt,.md,.json,.html,.htm,.zip'
 const MAX_MB = 50
-const VERCEL_SAFE_TEXT_MB = 4
-const VERCEL_SAFE_TEXT_BYTES = VERCEL_SAFE_TEXT_MB * 1024 * 1024
 
 const PROGRESS: Record<Status, number> = {
   idle: 0,
@@ -44,92 +42,6 @@ function fileExtension(name: string) {
   return name.split('.').pop()?.toLowerCase() ?? ''
 }
 
-function isInstagramJson(text: string) {
-  return text.includes('"timestamp_ms"') && text.includes('"sender_name"')
-}
-
-async function prepareUploadFile(
-  input: File,
-  errors: {
-    zipMissingText: string
-    zipTooLarge: (maxMb: number) => string
-    zipExtractFailed: string
-  }
-) {
-  if (fileExtension(input.name) !== 'zip') return input
-
-  try {
-    const zip = await JSZip.loadAsync(input)
-    const all = Object.values(zip.files).filter(e => !e.dir)
-
-    const byExt = (ext: string) => all.filter(e => e.name.toLowerCase().endsWith(ext))
-
-    // Instagram ZIP: merge all message_N.json files into one JSON
-    const jsonEntries = byExt('.json')
-    if (jsonEntries.length > 0) {
-      const texts = await Promise.all(jsonEntries.map(e => e.async('string')))
-      const igJsons = texts.filter(isInstagramJson)
-      if (igJsons.length > 0) {
-        // Merge messages arrays from all parts
-        const merged = igJsons.reduce<{ participants: unknown[]; messages: unknown[] }>(
-          (acc, t) => {
-            const parsed = JSON.parse(t)
-            if (!acc.participants.length && parsed.participants) acc.participants = parsed.participants
-            if (Array.isArray(parsed.messages)) acc.messages.push(...parsed.messages)
-            return acc
-          },
-          { participants: [], messages: [] }
-        )
-        const mergedText = JSON.stringify(merged)
-        const prepared = new File([mergedText], 'instagram_messages.json', { type: 'application/json' })
-        if (prepared.size > VERCEL_SAFE_TEXT_BYTES) throw new Error(errors.zipTooLarge(VERCEL_SAFE_TEXT_MB))
-        return prepared
-      }
-      // Non-Instagram JSON (e.g. ChatGPT export)
-      const texts2 = await Promise.all(jsonEntries.map(async e => ({
-        name: e.name.split('/').pop() ?? e.name,
-        text: await e.async('string'),
-      })))
-      const selected = texts2.sort((a, b) => b.text.length - a.text.length)[0]
-      const prepared = new File([selected.text], selected.name, { type: 'application/json' })
-      if (prepared.size > VERCEL_SAFE_TEXT_BYTES) throw new Error(errors.zipTooLarge(VERCEL_SAFE_TEXT_MB))
-      return prepared
-    }
-
-    // HTML (Instagram HTML export)
-    const htmlEntries = byExt('.html').concat(byExt('.htm'))
-    if (htmlEntries.length > 0) {
-      const candidates = await Promise.all(
-        htmlEntries.map(async e => ({
-          name: e.name.split('/').pop() ?? e.name,
-          text: await e.async('string'),
-        }))
-      )
-      const selected = candidates.sort((a, b) => b.text.length - a.text.length)[0]
-      const prepared = new File([selected.text], selected.name, { type: 'text/html' })
-      if (prepared.size > VERCEL_SAFE_TEXT_BYTES) throw new Error(errors.zipTooLarge(VERCEL_SAFE_TEXT_MB))
-      return prepared
-    }
-
-    // TXT (KakaoTalk / LINE)
-    const txtEntries = byExt('.txt')
-    if (!txtEntries.length) throw new Error(errors.zipMissingText)
-
-    const candidates = await Promise.all(
-      txtEntries.map(async (entry) => ({
-        name: entry.name.split('/').pop() ?? entry.name,
-        text: (await entry.async('string')).replace(/^\uFEFF/, ''),
-      }))
-    )
-    const selected = candidates.sort((a, b) => b.text.length - a.text.length)[0]
-    const prepared = new File([selected.text], selected.name, { type: 'text/plain;charset=utf-8' })
-    if (prepared.size > VERCEL_SAFE_TEXT_BYTES) throw new Error(errors.zipTooLarge(VERCEL_SAFE_TEXT_MB))
-    return prepared
-  } catch (error) {
-    if (error instanceof Error) throw error
-    throw new Error(errors.zipExtractFailed)
-  }
-}
 
 export default function UploadPage() {
   const router = useRouter()
@@ -210,15 +122,17 @@ export default function UploadPage() {
     setError('')
 
     try {
-      // Step 1: upload file
+      // Step 1: upload file to Vercel Blob, then process server-side
       setStatus('uploading')
-      const preparedFile = await prepareUploadFile(file, labels.errors)
-      const formData = new FormData()
-      formData.append('file', preparedFile, preparedFile.name)
+      const blob = await upload(file.name, file, {
+        access: 'private',
+        handleUploadUrl: '/api/upload/token',
+      })
 
       const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blobUrl: blob.url, filename: file.name }),
       })
 
       const uploadJson = await uploadResponse.json()

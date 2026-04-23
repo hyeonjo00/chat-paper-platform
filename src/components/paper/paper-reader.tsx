@@ -73,6 +73,9 @@ export default async function PaperReader({ params }: PageProps) {
     results?: string | null
     discussion?: string | null
     conclusion?: string | null
+    relationshipType?: string | null
+    relationshipIssues?: string | null
+    affectionScores?: unknown
   } | null = null
 
   if (needsTranslation) {
@@ -91,6 +94,9 @@ export default async function PaperReader({ params }: PageProps) {
         results: true,
         discussion: true,
         conclusion: true,
+        relationshipType: true,
+        relationshipIssues: true,
+        affectionScores: true,
       },
     })
   }
@@ -220,13 +226,15 @@ export default async function PaperReader({ params }: PageProps) {
           ) : null}
 
           {paper.relationshipType ? (() => {
-            const relIssues = paper.relationshipIssues as string | null
-            const relScores = paper.affectionScores as { speakerId: string; score: number; reasoning: string }[] | null
+            const relType = (translationCache?.relationshipType ?? paper.relationshipType) as string
+            const relIssues = (translationCache?.relationshipIssues ?? paper.relationshipIssues) as string | null
+            const relScores = (translationCache?.affectionScores ?? paper.affectionScores) as { speakerId: string; score: number; reasoning: string }[] | null
             return (
               <RelationshipCard
-                relationshipType={paper.relationshipType as string}
+                relationshipType={relType}
                 issues={relIssues ? relIssues.split('\n').filter(Boolean) : []}
                 affectionScores={relScores ?? null}
+                labels={labels.relationship}
               />
             )
           })() : null}
@@ -358,28 +366,28 @@ function RelationshipCard({
   relationshipType,
   issues,
   affectionScores,
+  labels,
 }: {
   relationshipType: string
   issues: string[]
   affectionScores: { speakerId: string; score: number; reasoning: string }[] | null
+  labels: { type: string; affection: string; issues: string; status: string; noIssues: string }
 }) {
   const isRomantic = !!affectionScores?.length
 
   return (
     <SurfaceCard className="p-6 sm:p-8">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-        {/* 관계 유형 */}
         <div className="min-w-[140px]">
-          <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-400 dark:text-slate-500">관계 유형</p>
+          <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-400 dark:text-slate-500">{labels.type}</p>
           <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950 dark:text-slate-100">
             {relationshipType}
           </p>
         </div>
 
-        {/* 호감도 (연인일 때만) */}
         {isRomantic && affectionScores ? (
           <div className="flex-1">
-            <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-400 dark:text-slate-500">호감도 추정</p>
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-400 dark:text-slate-500">{labels.affection}</p>
             <div className="mt-3 space-y-3">
               {affectionScores.map((s) => (
                 <div key={s.speakerId}>
@@ -402,10 +410,9 @@ function RelationshipCard({
           </div>
         ) : null}
 
-        {/* 문제점 */}
         {issues.length > 0 ? (
           <div className="flex-1">
-            <p className="text-[11px] font-semibold tracking-[0.14em] text-amber-500 dark:text-amber-400">발견된 문제점</p>
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-amber-500 dark:text-amber-400">{labels.issues}</p>
             <ul className="mt-3 space-y-2">
               {issues.map((issue, i) => (
                 <li key={i} className="flex items-start gap-2 rounded-[14px] border border-amber-200/80 bg-amber-50/80 px-3 py-2.5 text-sm text-amber-800 dark:border-amber-400/20 dark:bg-amber-500/[0.06] dark:text-amber-300">
@@ -417,8 +424,8 @@ function RelationshipCard({
           </div>
         ) : (
           <div className="flex-1">
-            <p className="text-[11px] font-semibold tracking-[0.14em] text-emerald-500 dark:text-emerald-400">관계 상태</p>
-            <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-300">특별한 문제점이 발견되지 않았습니다.</p>
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-emerald-500 dark:text-emerald-400">{labels.status}</p>
+            <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-300">{labels.noIssues}</p>
           </div>
         )}
       </div>

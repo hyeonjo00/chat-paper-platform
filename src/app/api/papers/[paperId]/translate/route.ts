@@ -1,11 +1,13 @@
 import { NextRequest } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db/prisma'
-import { ok, err, ERRORS } from '@/lib/api/response'
+import { ok, ERRORS } from '@/lib/api/response'
 import { getGuestUser } from '@/lib/auth/guest-user'
-import { translatePaper } from '@/lib/openai/translate'
+import { translatePaper, translateRelationship, type AffectionScore } from '@/lib/openai/translate'
 import type { PaperLang } from '@/lib/openai/promptPipeline'
 
 const VALID_LANGS: PaperLang[] = ['ko', 'en', 'ja']
+type LangEnum = 'KO' | 'EN' | 'JA'
 
 type RouteContext = { params: { paperId: string } }
 
@@ -31,74 +33,72 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
         results: true,
         discussion: true,
         conclusion: true,
+        relationshipType: true,
+        relationshipIssues: true,
+        affectionScores: true,
       },
     })
     if (!paper) return ERRORS.NOT_FOUND('논문을 찾을 수 없습니다')
 
     const paperLang = paper.language.toLowerCase() as PaperLang
-    // Same language as original — return original sections directly
+    const langEnum = targetLang.toUpperCase() as LangEnum
+
+    // Same language as original — return original directly
     if (paperLang === targetLang) {
-      return ok({
-        language: targetLang,
-        title: paper.title,
-        abstract: paper.abstract,
-        introduction: paper.introduction,
-        methods: paper.methods,
-        results: paper.results,
-        discussion: paper.discussion,
-        conclusion: paper.conclusion,
-        cached: true,
-      })
+      const { language: _l, ...rest } = paper
+      return ok({ language: targetLang, ...rest, cached: true })
     }
 
     // Check cache
     const cached = await prisma.paperTranslation.findUnique({
-      where: { paperId_language: { paperId: paper.id, language: targetLang.toUpperCase() as 'KO' | 'EN' | 'JA' } },
+      where: { paperId_language: { paperId: paper.id, language: langEnum } },
     })
     if (cached) {
-      return ok({
-        language: targetLang,
-        title: cached.title,
-        abstract: cached.abstract,
-        introduction: cached.introduction,
-        methods: cached.methods,
-        results: cached.results,
-        discussion: cached.discussion,
-        conclusion: cached.conclusion,
-        cached: true,
-      })
+      const { language: _l, paperId: _p, id: _i, createdAt: _c, ...rest } = cached
+      return ok({ language: targetLang, ...rest, cached: true })
     }
 
-    // Translate
-    const translated = await translatePaper(
-      {
-        title: paper.title,
-        abstract: paper.abstract,
-        introduction: paper.introduction,
-        methods: paper.methods,
-        results: paper.results,
-        discussion: paper.discussion,
-        conclusion: paper.conclusion,
-      },
-      targetLang,
-    )
+    // Translate sections and relationship data in parallel
+    const [translatedSections, translatedRel] = await Promise.all([
+      translatePaper(
+        {
+          title: paper.title,
+          abstract: paper.abstract,
+          introduction: paper.introduction,
+          methods: paper.methods,
+          results: paper.results,
+          discussion: paper.discussion,
+          conclusion: paper.conclusion,
+        },
+        targetLang,
+      ),
+      translateRelationship(
+        {
+          relationshipType: paper.relationshipType,
+          relationshipIssues: paper.relationshipIssues,
+          affectionScores: paper.affectionScores as AffectionScore[] | null,
+        },
+        targetLang,
+      ),
+    ])
 
-    // Upsert cache
+    const data = { ...translatedSections, ...translatedRel }
+
+    // Upsert cache — affectionScores null must use Prisma.JsonNull
+    const upsertData = {
+      ...data,
+      affectionScores: data.affectionScores
+        ? (data.affectionScores as Prisma.InputJsonValue)
+        : Prisma.JsonNull,
+    }
+
     await prisma.paperTranslation.upsert({
-      where: { paperId_language: { paperId: paper.id, language: targetLang.toUpperCase() as 'KO' | 'EN' | 'JA' } },
-      create: {
-        paperId: paper.id,
-        language: targetLang.toUpperCase() as 'KO' | 'EN' | 'JA',
-        ...translated,
-      },
-      update: translated,
+      where: { paperId_language: { paperId: paper.id, language: langEnum } },
+      create: { paperId: paper.id, language: langEnum, ...upsertData },
+      update: upsertData,
     })
 
-    return ok({
-      language: targetLang,
-      ...translated,
-      cached: false,
-    })
+    return ok({ language: targetLang, ...data, cached: false })
   } catch (error) {
     console.error('[translate] error:', error)
     return ERRORS.INTERNAL(

@@ -262,6 +262,13 @@ export const koCopy = {
       translating: '논문을 번역하는 중입니다. 잠시만 기다려주세요...',
       error: '번역 중 오류가 발생했습니다. 페이지를 새로 고침해 주세요.',
     },
+    relationship: {
+      type: '관계 유형',
+      affection: '호감도 추정',
+      issues: '발견된 문제점',
+      status: '관계 상태',
+      noIssues: '특별한 문제점이 발견되지 않았습니다.',
+    },
     readingMinutes: (minutes: number) => `${minutes}분`,
     countUnit: (count: number) => `${count}개`,
   },

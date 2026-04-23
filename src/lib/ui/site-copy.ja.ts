@@ -262,6 +262,13 @@ export const jaCopy = {
       translating: '論文を翻訳しています。少々お待ちください...',
       error: '翻訳中にエラーが発生しました。ページを更新してください。',
     },
+    relationship: {
+      type: '関係タイプ',
+      affection: '好感度推定',
+      issues: '発見された問題点',
+      status: '関係状態',
+      noIssues: '特に問題点は見つかりませんでした。',
+    },
     readingMinutes: (minutes: number) => `${minutes}分`,
     countUnit: (count: number) => `${count}`,
   },

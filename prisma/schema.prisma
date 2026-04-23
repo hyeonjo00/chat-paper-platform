@@ -100,14 +100,17 @@ model PaperTranslation {
   id           String   @id @default(cuid())
   paperId      String
   language     Language
-  title        String?  @db.Text
-  abstract     String?  @db.Text
-  introduction String?  @db.Text
-  methods      String?  @db.Text
-  results      String?  @db.Text
-  discussion   String?  @db.Text
-  conclusion   String?  @db.Text
-  createdAt    DateTime @default(now())
+  title              String?  @db.Text
+  abstract           String?  @db.Text
+  introduction       String?  @db.Text
+  methods            String?  @db.Text
+  results            String?  @db.Text
+  discussion         String?  @db.Text
+  conclusion         String?  @db.Text
+  relationshipType   String?
+  relationshipIssues String?  @db.Text
+  affectionScores    Json?
+  createdAt          DateTime @default(now())
 
   paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
 

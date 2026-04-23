@@ -7,13 +7,17 @@ const LANGUAGE_NAMES: Record<PaperLang, string> = {
   ja: 'Japanese',
 }
 
-const SYSTEM_PROMPT = (targetLang: PaperLang) =>
+const SECTION_PROMPT = (targetLang: PaperLang) =>
   `You are an academic translator. Translate the following academic paper section into ${LANGUAGE_NAMES[targetLang]}. ` +
   `Preserve the academic tone, paragraph structure, and formatting exactly. Return only the translated text.`
+
+const SHORT_PROMPT = (targetLang: PaperLang) =>
+  `Translate the following short phrase into ${LANGUAGE_NAMES[targetLang]}. Return only the translated text, nothing else.`
 
 async function translateOne(
   text: string,
   targetLang: PaperLang,
+  short = false,
 ): Promise<string> {
   if (!text.trim()) return text
   const openai = getOpenAI()
@@ -23,7 +27,7 @@ async function translateOne(
         model: 'gpt-4o-mini',
         temperature: 0.2,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT(targetLang) },
+          { role: 'system', content: short ? SHORT_PROMPT(targetLang) : SECTION_PROMPT(targetLang) },
           { role: 'user', content: text },
         ],
       },
@@ -43,6 +47,18 @@ export type TranslatableSections = {
   conclusion?: string | null
 }
 
+export type AffectionScore = {
+  speakerId: string
+  score: number
+  reasoning: string
+}
+
+export type TranslatableRelationship = {
+  relationshipType?: string | null
+  relationshipIssues?: string | null
+  affectionScores?: AffectionScore[] | null
+}
+
 export async function translatePaper(
   sections: TranslatableSections,
   targetLang: PaperLang,
@@ -55,8 +71,41 @@ export async function translatePaper(
   )
 
   const result: TranslatableSections = {}
-  entries.forEach((k, i) => {
-    result[k] = translated[i]
-  })
+  entries.forEach((k, i) => { result[k] = translated[i] })
+  return result
+}
+
+export async function translateRelationship(
+  rel: TranslatableRelationship,
+  targetLang: PaperLang,
+): Promise<TranslatableRelationship> {
+  const tasks: Promise<void>[] = []
+  const result: TranslatableRelationship = {}
+
+  if (rel.relationshipType) {
+    tasks.push(
+      translateOne(rel.relationshipType, targetLang, true).then((t) => { result.relationshipType = t }),
+    )
+  }
+
+  if (rel.relationshipIssues) {
+    // Translate issues as a block (newline-separated) to preserve structure
+    tasks.push(
+      translateOne(rel.relationshipIssues, targetLang, false).then((t) => { result.relationshipIssues = t }),
+    )
+  }
+
+  if (rel.affectionScores?.length) {
+    const reasonings = rel.affectionScores.map((s) => s.reasoning).filter(Boolean)
+    const translatedReasonings = await Promise.all(
+      reasonings.map((r) => translateOne(r, targetLang, false)),
+    )
+    result.affectionScores = rel.affectionScores.map((s, i) => ({
+      ...s,
+      reasoning: translatedReasonings[i] ?? s.reasoning,
+    }))
+  }
+
+  await Promise.all(tasks)
   return result
 }

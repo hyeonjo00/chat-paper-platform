@@ -262,6 +262,13 @@ export const enCopy = {
       translating: 'Translating the paper, please wait...',
       error: 'Translation failed. Please refresh the page.',
     },
+    relationship: {
+      type: 'Relationship Type',
+      affection: 'Affection Estimate',
+      issues: 'Issues Found',
+      status: 'Relationship Status',
+      noIssues: 'No significant issues were found.',
+    },
     readingMinutes: (minutes: number) => `${minutes} min`,
     countUnit: (count: number) => `${count}`,
   },

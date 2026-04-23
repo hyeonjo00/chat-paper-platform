@@ -258,6 +258,10 @@ export const jaCopy = {
       sectionPrefix: 'セクション',
       paragraphUnit: (count: number) => `${count}段落`,
     },
+    translation: {
+      translating: '論文を翻訳しています。少々お待ちください...',
+      error: '翻訳中にエラーが発生しました。ページを更新してください。',
+    },
     readingMinutes: (minutes: number) => `${minutes}分`,
     countUnit: (count: number) => `${count}`,
   },

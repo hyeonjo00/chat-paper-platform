@@ -5,6 +5,9 @@
     },
     "src/app/api/upload/route.ts": {
       "maxDuration": 30
+    },
+    "src/app/api/papers/[paperId]/translate/route.ts": {
+      "maxDuration": 60
     }
   }
 }

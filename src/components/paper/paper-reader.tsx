@@ -18,6 +18,7 @@ import {
   secondaryButtonClass,
 } from '@/components/ui/surface'
 import PaperExportActions from '@/components/paper/paper-export-actions'
+import PaperTranslateTrigger from '@/components/paper/paper-translate-trigger'
 
 const SECTION_ORDER = [
   'abstract',
@@ -60,8 +61,47 @@ export default async function PaperReader({ params }: PageProps) {
 
   if (!paper) notFound()
 
+  const paperLang = paper.language.toLowerCase() as 'ko' | 'en' | 'ja'
+  const needsTranslation = paperLang !== locale
+
+  // Check translation cache when locale differs from paper language
+  let translationCache: {
+    title?: string | null
+    abstract?: string | null
+    introduction?: string | null
+    methods?: string | null
+    results?: string | null
+    discussion?: string | null
+    conclusion?: string | null
+  } | null = null
+
+  if (needsTranslation) {
+    translationCache = await prisma.paperTranslation.findUnique({
+      where: {
+        paperId_language: {
+          paperId: paper.id,
+          language: locale.toUpperCase() as 'KO' | 'EN' | 'JA',
+        },
+      },
+      select: {
+        title: true,
+        abstract: true,
+        introduction: true,
+        methods: true,
+        results: true,
+        discussion: true,
+        conclusion: true,
+      },
+    })
+  }
+
+  // Use translated sections if available, otherwise original
+  const displayedPaper = translationCache
+    ? { ...paper, ...Object.fromEntries(Object.entries(translationCache).filter(([, v]) => v != null)) }
+    : paper
+
   const sections = SECTION_ORDER.flatMap((key) => {
-    const paragraphs = splitParagraphs(paper[key])
+    const paragraphs = splitParagraphs(displayedPaper[key as keyof typeof displayedPaper] as string | null)
     if (!paragraphs.length) return []
 
     return [
@@ -93,7 +133,7 @@ export default async function PaperReader({ params }: PageProps) {
                 <Eyebrow>{labels.eyebrow}</Eyebrow>
                 <div className="space-y-3">
                   <h1 className="text-3xl font-semibold tracking-[-0.05em] text-slate-950 dark:text-slate-100 sm:text-4xl lg:text-[2.9rem]">
-                    {paper.title || labels.untitled}
+                    {displayedPaper.title || labels.untitled}
                   </h1>
                   <p className="max-w-2xl text-sm leading-7 text-slate-500 dark:text-slate-400">
                     {labels.description}
@@ -170,6 +210,15 @@ export default async function PaperReader({ params }: PageProps) {
             </div>
           </SurfaceCard>
 
+          {needsTranslation && !translationCache ? (
+            <PaperTranslateTrigger
+              paperId={paper.id}
+              targetLang={locale}
+              translatingLabel={labels.translation.translating}
+              errorLabel={labels.translation.error}
+            />
+          ) : null}
+
           {paper.relationshipType ? (() => {
             const relIssues = paper.relationshipIssues as string | null
             const relScores = paper.affectionScores as { speakerId: string; score: number; reasoning: string }[] | null
@@ -213,7 +262,7 @@ export default async function PaperReader({ params }: PageProps) {
               </SurfaceCard>
 
               {sections.length ? (
-                <PaperExportActions title={paper.title || labels.untitled} sections={sections} />
+                <PaperExportActions title={displayedPaper.title || labels.untitled} sections={sections} />
               ) : null}
 
               <SurfaceCard tone="soft" className="p-5">

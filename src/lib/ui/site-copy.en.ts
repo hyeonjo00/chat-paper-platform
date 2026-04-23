@@ -258,6 +258,10 @@ export const enCopy = {
       sectionPrefix: 'Section',
       paragraphUnit: (count: number) => `${count} paragraphs`,
     },
+    translation: {
+      translating: 'Translating the paper, please wait...',
+      error: 'Translation failed. Please refresh the page.',
+    },
     readingMinutes: (minutes: number) => `${minutes} min`,
     countUnit: (count: number) => `${count}`,
   },

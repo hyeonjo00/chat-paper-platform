@@ -258,6 +258,10 @@ export const koCopy = {
       sectionPrefix: '섹션',
       paragraphUnit: (count: number) => `${count}문단`,
     },
+    translation: {
+      translating: '논문을 번역하는 중입니다. 잠시만 기다려주세요...',
+      error: '번역 중 오류가 발생했습니다. 페이지를 새로 고침해 주세요.',
+    },
     readingMinutes: (minutes: number) => `${minutes}분`,
     countUnit: (count: number) => `${count}개`,
   },

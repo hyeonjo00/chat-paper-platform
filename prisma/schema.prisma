@@ -87,12 +87,33 @@ model Paper {
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   upload  Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
-  exports Export[]
-  jobs    Job[]
+  exports      Export[]
+  jobs         Job[]
+  translations PaperTranslation[]
 
   @@index([userId])
   @@index([uploadId])
   @@map("papers")
+}
+
+model PaperTranslation {
+  id           String   @id @default(cuid())
+  paperId      String
+  language     Language
+  title        String?  @db.Text
+  abstract     String?  @db.Text
+  introduction String?  @db.Text
+  methods      String?  @db.Text
+  results      String?  @db.Text
+  discussion   String?  @db.Text
+  conclusion   String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@unique([paperId, language])
+  @@index([paperId])
+  @@map("paper_translations")
 }
 
 model Export {
